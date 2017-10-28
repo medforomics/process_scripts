@@ -27,11 +27,11 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-r1base="${r1%.fastq*}"
-r2base="${r2%.fastq*}"
+r1base="${fq1%.fastq*}"
+r2base="${fq2%.fastq*}"
 
 module load trimgalore/0.4.1 cutadapt/1.9.1
-if [ $R1 == $R2 ]
+if [ $fq1 == $fq2 ]
 then
     trim_galore -q 25 --illumina --gzip --length 35 ${fq1}
     mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
