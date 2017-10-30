@@ -15,7 +15,7 @@ OPTIND=1 # Reset OPTIND
 while getopts :r:b:n:p:h opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         b) sbam=$OPTARG;;
         c) bed=$OPTARG;;
         y) nuctype=$OPTARG;;
@@ -27,13 +27,7 @@ done
 shift $(($OPTIND -1))
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
-    usage
-fi
-
-if [ $refgeno == 'GRCh38' ] || [ $refgeno == 'GRCm38' ]; then
-    index_path=/project/shared/bicf_workflow_ref/${refgeno}
-else
+if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
     usage
 fi
 

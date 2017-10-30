@@ -15,7 +15,7 @@ OPTIND=1 # Reset OPTIND
 while getopts :r:a:x:y:p:h opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         x) fq1=$OPTARG;;
         y) fq2=$OPTARG;;
 	a) algo=$OPTARG;;
@@ -31,12 +31,6 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [ $refgeno == 'GRCh38' ] || [ $refgeno == 'GRCm38' ]; then
-    index_path=/project/shared/bicf_workflow_ref/${refgeno}
-else
-    usage
-fi
-
 module load  samtools/gcc/1.6 picard/2.10.3
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
@@ -47,9 +41,9 @@ then
     if ($fq1 != $fq2)
     then
 	module load star/2.4.2a
-	STAR --genomeDir ${index_path}/star_index/ --readFilesIn ${fq1} ${fq2} --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
+	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 $fq2 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
     else
-	STAR --genomeDir ${index_path}/${star_index} --readFilesIn ${fq1} --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
+	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
     fi
     mv outLog.final.out ${pair_id}.alignerout.txt
     mv outAligned.sortedByCoord.out.bam output.bam
@@ -57,9 +51,9 @@ else
     module load hisat2/2.1.0-intel
     if [ $fq1 == $fq2 ]
     then
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -U ${fq1} -S out.sam --summary-file ${pair_id}.alignerout.txt
+	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
     else
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -1 ${fq1} -2 ${fq2} -S out.sam --summary-file ${pair_id}.alignerout.txt
+	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
     samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
 fi
