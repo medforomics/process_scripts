@@ -27,7 +27,7 @@ done
 shift $(($OPTIND -1))
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
+if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
     usage
 fi
 

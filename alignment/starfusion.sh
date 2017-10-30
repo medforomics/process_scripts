@@ -29,11 +29,7 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [ $refgeno == 'GRCh38' ] || [ $refgeno == 'GRCm38' ]; then
-    index_path=/project/shared/bicf_workflow_ref/${refgeno}/CTAT_lib/
-else
-    usage
-fi
+index_path=${refgeno}/CTAT_lib/
 
 module add python/2.7.x-anaconda star/2.5.2b
 STAR-Fusion --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --output_dir star_fusion &> star_fusion.err
