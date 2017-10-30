@@ -1,26 +1,30 @@
+#!/bin/bash
+#germline_vc.sh
+
 usage() {
   echo "-h Help documentation for gatkrunner.sh"
   echo "-r  --Reference Genome: GRCh38 or GRCm38"
   echo "-p  --Prefix for output file name"
   echo "-a  --Algorithm/Command"
-  echo "Example: bash hisat.sh -p prefix -r GRCh38"
+  echo "Example: bash hisat.sh -p prefix -r /path/GRCh38"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
 while getopts :r:a:b:p:h opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         a) algo=$OPTARG;;
         h) usage;;
     esac
 done
 function join_by { local IFS="$1"; shift; echo "$*"; }
+
 shift $(($OPTIND -1))
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $bam ] || [[ -z $refgeno ]]]; then
+if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
 if [[ -z $SLURM_CPUS_ON_NODE ]]
@@ -63,8 +67,8 @@ then
     samtools mpileup -d 99999 -t 'AD,DP,INFO/AD' -uf ${reffa} *.bam > ${pair_id}.mpi
     bcftools filter -i "AD[1]/DP > 0.01" ${pair_id}.mpi | bcftools filter -i "DP > 50" | bcftools call -m -A |vcf-annotate -n --fill-type |  bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.lowfreq.vcf.gz -
     java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "(CNT[*] >0)" - |bgzip > ${pair_id}.hotspot.vcf.gz
-elif
-then [[ $algo == 'speedseq' ]]
+elif [[ $algo == 'speedseq' ]]
+then
     module load speedseq/20160506
     speedseq var -t $SLURM_CPUS_ON_NODE -o ssvar ${reffa} *.bam
     vcf-annotate -n --fill-type ssvar.vcf.gz| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.ssvar.vcf.gz -
@@ -80,8 +84,8 @@ then
     java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs -o gatk.vcf -nt $SLURM_CPUS_ON_NODE $gvcflist
     vcf-annotate -n --fill-type gatk.vcf | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.gatk.vcf.gz -
     tabix ${pair_id}.gatk.vcf.gz
-elif
-then [[ $algo == 'platypus' ]]
+elif [[ $algo == 'platypus' ]]
+then
     module load platypus/gcc/0.8.1
     $bamlist = join_by , *.bam
     Platypus.py callVariants --minMapQual=10 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
