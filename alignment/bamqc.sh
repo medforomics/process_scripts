@@ -8,14 +8,14 @@ usage() {
   echo "-n  --NucType"
   echo "-p  --Prefix for output file name"
   echo "-c  --Capture Bedfile"
-  echo "Example: bash hisat.sh -p prefix -r GRCh38 -a hisat -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
+  echo "Example: bash bamqc.sh -p prefix -r /project/shared/bicf_workflow_ref/GRCh38 -b SRR1551047.bam  -y dna -c target.bed"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
 while getopts :r:b:n:p:h opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         b) sbam=$OPTARG;;
         c) bed=$OPTARG;;
         y) nuctype=$OPTARG;;
@@ -28,12 +28,6 @@ shift $(($OPTIND -1))
 
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
-    usage
-fi
-
-if [ $refgeno == 'GRCh38' ] || [ $refgeno == 'GRCm38' ]; then
-    index_path=/project/shared/bicf_workflow_ref/${refgeno}
-else
     usage
 fi
 

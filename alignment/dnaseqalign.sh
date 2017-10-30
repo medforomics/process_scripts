@@ -7,14 +7,14 @@ usage() {
   echo "-x  --FastQ R1"
   echo "-y  --FastQ R2"
   echo "-p  --Prefix for output file name"
-  echo "Example: bash hisat.sh -p prefix -r GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
+  echo "Example: bash dnaseqalign.sh -p prefix -r /project/shared/bicf_workflow_ref/GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
 while getopts :r:a:x:y:p:h opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         x) fq1=$OPTARG;;
         y) fq2=$OPTARG;;
 	a) algo=$OPTARG;;
@@ -30,12 +30,6 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [ $refgeno == 'GRCh38' ] || [ $refgeno == 'GRCm38' ] || [ $refgeno == 'GRCh37' ]; then
-    index_path=/project/shared/bicf_workflow_ref/${refgeno}
-else
-    usage
-fi
-
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
@@ -48,7 +42,7 @@ then
 else
     bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
 fi
-if [ $refgeno == 'GRCh38' ]
+if [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
     cat out.sam | k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p ${pair_id}.hla ${index_path}/genome.fa.alt | samtools view -1 - > output.unsort.bam
     run-HLA ${pair_id}.hla > ${pair_id}.hla.top 2> ${pair_id}.log.hla
@@ -59,7 +53,7 @@ else
 fi 
 samtools sort --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
 samtools view -h output.unsort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
-gawk '{ if (\$0~"^@") { print; next } else { \$10="*"; \$11="*"; print } }' OFS="\\t" splitters.sam | samtools  view -S -b - | samtools sort -o ${pair_id}.splitters.bam -
-gawk '{ if (\$0~"^@") { print; next } else { \$10="*"; \$11="*"; print } }' OFS="\\t" discordants.sam | samtools  view -S  -b - | samtools sort -o ${pair_id}.discordants.bam -
-java -Djava.io.tmpdir=./ -Xmx4g  -jar \$PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
+gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o ${pair_id}.splitters.bam -
+gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o ${pair_id}.discordants.bam -
+java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
 samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
