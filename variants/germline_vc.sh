@@ -75,19 +75,20 @@ then
 elif [[ $algo == 'gatk' ]]
 then
     module load gatk/3.7
-    $gvcflist = ''
+    $gvcflist=''
     for i in *.bam; do
-	java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 30 -stand_emit_conf 10.0 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.gatk.g.vcf -nct 2 &
-	$gvcflist += "--variant ${i}.gatk.g.vcf "
+	java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.gatk.g.vcf -nct 2 &
+	$gvcflist+="--variant ${i}.gatk.g.vcf "
     done
     wait
+    
     java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs -o gatk.vcf -nt $SLURM_CPUS_ON_NODE $gvcflist
-    vcf-annotate -n --fill-type gatk.vcf | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.gatk.vcf.gz -
+    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.gatk.vcf.gz gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
-    $bamlist = join_by , *.bam
+    bamlist=`join_by , *.bam`
     Platypus.py callVariants --minMapQual=10 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
