@@ -3,10 +3,10 @@
 
 usage() {
   echo "-h Help documentation for gatkrunner.sh"
-  echo "-r  --Reference Genome: GRCh38 or GRCm38"
+  echo "-r  --Path to Reference Genome with the file genome.fa"
   echo "-p  --Prefix for output file name"
-  echo "-a  --Algorithm/Command"
-  echo "Example: bash hisat.sh -p prefix -r /path/GRCh38"
+  echo "-a  --Algorithm/Command: gatk, mpileup, speedseq, platypus "
+  echo "Example: bash hisat.sh -p prefix -r /path/GRCh38 -a gatk"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
@@ -75,10 +75,10 @@ then
 elif [[ $algo == 'gatk' ]]
 then
     module load gatk/3.7
-    $gvcflist=''
+    gvcflist=''
     for i in *.bam; do
 	java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.gatk.g.vcf -nct 2 &
-	$gvcflist+="--variant ${i}.gatk.g.vcf "
+	gvcflist="$gvcflist --variant ${i}.gatk.g.vcf"
     done
     wait
     
@@ -92,5 +92,5 @@ then
     Platypus.py callVariants --minMapQual=10 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
-    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${i}.pl.vcf.gz platypus.vcf.gz
+    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 fi

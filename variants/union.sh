@@ -5,7 +5,6 @@ usage() {
   echo "-h Help documentation for gatkrunner.sh"
   echo "-r  --Reference Genome: GRCh38 or GRCm38"
   echo "-p  --Prefix for output file name"
-  echo "-a  --Algorithm/Command"
   echo "Example: bash hisat.sh -p prefix -r /path/GRCh38"
   exit 1
 }
@@ -20,7 +19,7 @@ do
 done
 function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
-
+baseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 module load gatk/3.7 python/2.7.x-anaconda bedtools/2.26.0 snpeff/4.3q samtools/1.6 vcftools/0.1.14
 
 HS=*.hotspot.vcf.gz
@@ -30,16 +29,16 @@ calllist=''
 for i in *.vcf.gz; do
     EXT="${i#*.}"
     CALL="${EXT%%.*}"
-    calllist+=" $CALL"
+    calllist="$calllist $CALL"
     tabix $i
-    if [[ $i eq $HS ]]
+    if [[ $i == $HS ]]
     then
 	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a $i -b stdin |bgzip > hotspot.nooverlap.vcf.gz
 	tabix hotspot.nooverlap.vcf.gz
-	list2+=" hotspot.nooverlap.vcf.gz"
-	varlist+=" --variant:$CALL hotspot.nooverlap.vcf.gz"
+	list2="$list2 hotspot.nooverlap.vcf.gz"
+	varlist="$varlist --variant:$CALL hotspot.nooverlap.vcf.gz"
     else 
-	varlist+=" --variant:$CALL $i"
+	varlist="$varlist --variant:$CALL $i"
     fi
 done 
 
@@ -48,17 +47,17 @@ bedtools multiinter -i $list2 -names $calllist | cut -f 1,2,3,5 | bedtools sort 
 priority='ssvar'
 if [[ *.platypus.vcf.gz ]]
 then
-    priority+=',platypus'
+    priority="$priority,platypus"
 fi
-priority+=',sam,gatk'
+priority="$priority,sam,gatk"
 if [[ *.hotspot.vcf.gz ]]
 then
-    priority+=',hotspot'
+    priority="$priority,hotspot"
 fi
 
 java -Xmx32g -jar $GATK_JAR -R ${index_path}/genome.fa -T CombineVariants --filteredrecordsmergetype KEEP_UNCONDITIONAL $varlist -genotypeMergeOptions PRIORITIZE -priority $priority -o ${pair_id}.int.vcf
 
-perl $baseDir/scripts/uniform_integrated_vcf.pl ${pair_id}.int.vcf
+perl $baseDir/uniform_integrated_vcf.pl ${pair_id}.int.vcf
 bgzip ${pair_id}_integrate.bed
 tabix ${pair_id}_integrate.bed.gz
 bgzip ${pair_id}.uniform.vcf
