@@ -48,20 +48,26 @@ fi
 if [[ -a "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
+    dict="${index_path}/genome.dict"
 else 
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
-module load python/2.7.x-anaconda samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+module load python/2.7.x-anaconda samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
 for i in *.bam; do
-    samtools index -@ $SLURM_CPUS_ON_NODE $i
+    if [[ ! -f ${i}.bai ]]
+    then
+	samtools index --threads $SLURM_CPUS_ON_NODE $i
+    fi
 done
 
 if [[ $algo == 'mpileup' ]]
 then
-    samtools mpileup -t 'AD,DP,INFO/AD' -ug -Q20 -C50 -f ${reffa} *.bam | bcftools call -vmO z -o ${pair_id}.sam.ori.vcf.gz
-    vcf-sort ${pair_id}.sam.ori.vcf.gz | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.sam.vcf.gz -
+    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "samtools mpileup -t 'AD,DP,INFO/AD' -ug -Q20 -C50 -r {} -f ${reffa} *.bam | bcftools call -vmO z -o ${pair_id}.samchr.{}.vcf.gz"
+    vcf-concat ${pair_id}.samchr.*.vcf.gz |vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf -
+    java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
+    bgzip ${pair_id}.sam.vcf
 elif [[ $algo == 'hotspot' ]]
 then
     samtools mpileup -d 99999 -t 'AD,DP,INFO/AD' -uf ${reffa} *.bam > ${pair_id}.mpi
@@ -77,13 +83,14 @@ then
     module load gatk/3.7
     gvcflist=''
     for i in *.bam; do
-	java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.gatk.g.vcf -nct 2 &
+	cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.{}.chr.gatk.g.vcf -nct 2 -L {}"
+	vcf-concat ${i}.*.chr.gatk.g.vcf |vcf-sort > gatk.g.vcf
+	rm ${i}.*.chr.gatk.g.vcf
+	java -jar $PICARD/picard.jar SortVcf I=gatk.g.vcf O=${i}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
 	gvcflist="$gvcflist --variant ${i}.gatk.g.vcf"
     done
-    wait
-    
-    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs -o gatk.vcf -nt $SLURM_CPUS_ON_NODE $gvcflist
-    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.gatk.vcf.gz gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
+    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs -o gatk.vcf $gvcflist
+    bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
 then

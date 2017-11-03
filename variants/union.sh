@@ -25,6 +25,7 @@ module load gatk/3.7 python/2.7.x-anaconda bedtools/2.26.0 snpeff/4.3q samtools/
 HS=*.hotspot.vcf.gz
 list1=`ls *vcf.gz|grep -v hotspot`
 list2=`ls *vcf.gz|grep -v hotspot`
+varlist=''
 calllist=''
 for i in *.vcf.gz; do
     EXT="${i#*.}"
@@ -50,7 +51,7 @@ then
     priority="$priority,platypus"
 fi
 priority="$priority,sam,gatk"
-if [[ *.hotspot.vcf.gz ]]
+if [[ -f *.hotspot.vcf.gz ]]
 then
     priority="$priority,hotspot"
 fi
