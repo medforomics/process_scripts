@@ -7,7 +7,7 @@ usage() {
   echo "-a  --FastQ R1"
   echo "-b  --FastQ R2"
   echo "-p  --Prefix for output file name"
-  echo "Example: bash hisat.sh -p prefix -r GRCh38 -a SRR1551047_1.fastq.gz  -b SRR1551047_2.fastq.gz"
+  echo "Example: bash starfusion.sh -p prefix -r /project/shared/bicf_workflow_ref/GRCh38 -a SRR1551047_1.fastq.gz  -b SRR1551047_2.fastq.gz"
   exit 1
 }
 OPTIND=1 # Reset OPTIND

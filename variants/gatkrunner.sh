@@ -66,7 +66,7 @@ then
     java -Xmx4g -jar $PICARD/picard.jar ReorderSam I=${pair_id}.clean.bam O=${pair_id}.sort.bam R=${reffa} CREATE_INDEX=TRUE 
     #java -Xmx4g -jar $PICARD/picard.jar AddOrReplaceReadGroups INPUT=${pair_id}.clean.bam O=${pair_id}.rg_added_sorted.bam SO=coordinate RGID=${pair_id} RGLB=tx RGPL=illumina RGPU=barcode RGSM=${pair_id}
     #samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.clean.bam
-    java -Xmx4g -jar $GATK_JAR -T SplitNCigarReads -R ${reffa} -I ${pair_id}.clean.bam -o ${pair_id}.split.bam -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS
+    java -Xmx4g -jar $GATK_JAR -T SplitNCigarReads -R ${reffa} -I ${pair_id}.sort.bam -o ${pair_id}.split.bam -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS
     java -Xmx32g -jar $GATK_JAR -T RealignerTargetCreator -known ${knownindel} -R ${reffa} -o ${pair_id}.bam.list -I ${pair_id}.split.bam -nt $SLURM_CPUS_ON_NODE -nct 1
     java -Xmx32g -jar $GATK_JAR -I ${pair_id}.split.bam -R ${reffa} --filter_mismatching_base_and_quals -T IndelRealigner -targetIntervals ${pair_id}.bam.list -o ${pair_id}.realigned.bam
     java -Xmx32g -jar $GATK_JAR -l INFO -R ${reffa} --knownSites ${dbsnp} -I ${pair_id}.realigned.bam -T BaseRecalibrator -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov ContextCovariate -o ${pair_id}.recal_data.grp -nt 1 -nct $SLURM_CPUS_ON_NODE
