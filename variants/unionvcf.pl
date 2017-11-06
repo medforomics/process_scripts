@@ -3,23 +3,33 @@
 
 my $headerfile = shift @ARGV;
 my @vcffiles = @ARGV;
-my $outfile = $vcf;
-$outfile =~ s/vcf.gz/uniform.vcf/;
+
 open HEADER, "<$headerfile" or die $!;
-open OUT, ">union.vcf" or die $!;
+open OUT, ">int.vcf" or die $!;
 while (my $line = <HEADER>) {
-    print OUT $line;
+    chomp($line);
+    print OUT $line,"\n";;
 }
 close HEADER;
+my @sampleorder;
+
 my %headerlines;
 foreach $vcf (@vcffiles) {
     $caller = (split(/\./,$vcf))[1];
     open VCF, "gunzip -c $vcf|" or die $!;
+    my @sampleids;
     while (my $line = <VCF>) {
 	chomp($line);
 	if ($line =~ m/#/) {
-	    $headerlines{$line} = 1;
-	    next;
+	    if ($line =~ m/#CHROM/) {
+		($chromhd, $posd,$idhd,$refhd,$althd,$scorehd,
+		 $filterhd,$annothd,$formathd,@sampleids) = split(/\t/, $line);
+		unless (@sampleorder) {
+		    @sampleorder = @sampleids;
+		    print OUT $line,"\n";
+		}
+		next;
+	    }
 	}
 	my ($chrom, $pos,$id,$ref,$alt,$score,
 	    $filter,$annot,$format,@gts) = split(/\t/, $line);
@@ -30,13 +40,15 @@ foreach $vcf (@vcffiles) {
 	}
 	my @deschead = split(/:/,$format);
 	my $newformat = 'GT:DP:AD:AO:RO';
-	my @newgts = ();
+	my %newgts;
 	my $missingGT = 0;
-      FG:foreach my $allele_info (@gts) {
+      FG:foreach my $i (0..$#gts) {
+	  my $allele_info = $gts[$i];
+	  my $sid = $sampleids[$i];
 	  my @gtinfo = split(/:/,$allele_info);
 	  my %gtdata;
 	  if ($allele_info eq '.') {
-	      push @newgts, '.:.:.:.:.';
+	      $newgts{$sid} = '.:.:.:.:.';
 	      $missingGT ++;
 	      next FG;
 	  }
@@ -44,7 +56,7 @@ foreach $vcf (@vcffiles) {
 	      $gtdata{$deschead[$i]} = $gtinfo[$i];
 	  }
 	  if ($gtdata{DP} == 0 || $gtdata{GT} eq './.') {
-	      push @newgts, '.:.:.:.:.';
+	      $newgts{$sid} = '.:.:.:.:.';
 	      $missingGT ++;
 	      next FG;
 	  }
@@ -69,9 +81,13 @@ foreach $vcf (@vcffiles) {
 	  if ($gtdata{DP} && $gtdata{DP} < 3) {
 	      $missingGT ++;
 	  }
-	  push @newgts, join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
+	  $newgts{$sid} =  join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
       }
 	next if ($missingGT == scalar(@gts));
+	my @newgts;
+	foreach $id (@sampleorder) {
+	    push @newgts, $newgts{$id};
+	}
 	$lines{$chrom}{$pos}{$caller} = join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
     }
     close VCF;

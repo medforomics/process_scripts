@@ -28,9 +28,6 @@ list2=`ls *vcf.gz|grep -v hotspot`
 varlist=''
 calllist=''
 for i in *.vcf.gz; do
-    EXT="${i#*.}"
-    CALL="${EXT%%.*}"
-    calllist="$calllist $CALL"
     if [[ $i == $HS ]]
     then
 	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a $i -b stdin |bgzip > hotspot.nooverlap.vcf.gz
@@ -38,6 +35,6 @@ for i in *.vcf.gz; do
     fi
 done 
 
-perl $baseDir/unionvcf.pl $list2
+perl $baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2
 perl $baseDir/vcfsorter.pl ${index_path}/genome.dict int.vcf |bgzip > ${pair_id}.union.vcf.gz
 
