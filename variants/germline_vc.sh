@@ -53,7 +53,7 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
-module load python/2.7.x-anaconda samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
+module load python/2.7.x-anaconda picard/2.10.3 samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]

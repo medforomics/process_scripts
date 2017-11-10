@@ -35,4 +35,4 @@ cnvkit.py coverage ${sbam} /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.cnvki
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.normals.cnn -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
 cnvkit.py call ${pair_id}.cns -o ${pair_id}.call.cns
-cnvkit.py diagram ${pair_id}.cnr -s ${pair_id}.cns -o ${pair_id}.pdf
+cnvkit.py diagram ${pair_id}.cnr -s ${pair_id}.cns -o ${pair_id}.cnv.pdf

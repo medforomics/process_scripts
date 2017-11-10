@@ -8,17 +8,19 @@ usage() {
   echo "-y  --FastQ R2"
   echo "-a  --Method: hisat or star"
   echo "-p  --Prefix for output file name"
-  echo "Example: bash hisat.sh -p prefix -r GRCh38 -a hisat -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
+  echo "-u  [UMI sequences are in FQ Read Name]"
+  echo "Example: bash rnaseqalign.sh -a hisat -p prefix -u -r /project/shared/bicf_workflow_ref/GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:a:x:y:p:h opt
+while getopts :r:a:x:y:p:hu opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         x) fq1=$OPTARG;;
         y) fq2=$OPTARG;;
 	a) algo=$OPTARG;;
+	u) umi=1;;
         p) pair_id=$OPTARG;;
         h) usage;;
     esac
@@ -32,6 +34,7 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
 fi
 
 module load  samtools/gcc/1.6 picard/2.10.3
+baseDir="`dirname \"$0\"`"
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
@@ -56,6 +59,11 @@ else
 	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
     samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
+fi
+if [[ $umi==1 ]]
+then
+    python ${baseDir}/add_umi_bam.py -b output.bam -o output.unsort2.bam
+    mv output.unsort2.bam output.bam
 fi
 samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -n -o  output.nsort.bam output.bam
 java -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.nsort.bam O=${pair_id}.bam

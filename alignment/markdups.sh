@@ -31,6 +31,7 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
+baseDir="`dirname \"$0\"`"
 
 module load picard/2.10.3 samtools/1.6
 
@@ -53,6 +54,7 @@ then
     java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'fgbio_umi' ]   
 then
+    samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
     source activate fgbiotools
     fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -m 10
     fgbio CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'

@@ -19,7 +19,8 @@ do
 done
 function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
-baseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+baseDir="`dirname \"$0\"`"
+
 module load bedtools/2.26.0 samtools/1.6
 
 HS=*.hotspot.vcf.gz
