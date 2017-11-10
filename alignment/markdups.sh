@@ -48,7 +48,7 @@ then
     samtools markdup -s --output-fmt BAM -@ $SLURM_CPUS_ON_NODE sort.bam ${pair_id}.dedup.bam
 elif [ $algo == 'picard' ]
 then
-    java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${prefix}.dedup.bam M=${pair_id}.dedup.stat.txt
+    java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard_umi' ]
 then
     java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
@@ -67,5 +67,5 @@ then
     bwa mem -M -C -t 2 -R '@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}' /project/shared/bicf_workflow_ref/GRCh38/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz | samtools view -1 - > ${pair_id}.consensus.bam
     samtools sort --threads 10 -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
 else
-    cp ${sbam} ${prefix}.dedup.bam    
+    cp ${sbam} ${pair_id}.dedup.bam    
 fi
