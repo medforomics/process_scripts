@@ -56,7 +56,7 @@ elif [ $algo == 'fgbio_umi' ]
 then
     samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
     source activate fgbiotools
-    fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -m 10
+    fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -m 0
     fgbio CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
     source deactivate
     module load bwa/intel/0.7.15
