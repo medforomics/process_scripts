@@ -54,6 +54,6 @@ if [[ $nuctype == 'dna' ]]; then
     java -Xmx4g -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt
     samtools view -b -q 1 ${pair_id}.ontarget.bam | bedtools coverage -sorted -hist -g ${index_path}/genomefile.txt -b stdin -a ${bed}  >  ${pair_id}.mapqualcov.txt
     bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a ${bed} -b ${sbam} -hist > ${pair_id}.covhist.txt
-    perl $baseDir/scripts/calculate_depthcov.pl ${pair_id}.covhist.txt
+    perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt
     grep ^all ${pair_id}.covhist.txt >  ${pair_id}.genomecov.txt
  fi
