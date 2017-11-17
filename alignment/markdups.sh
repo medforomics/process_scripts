@@ -64,7 +64,7 @@ then
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
     gzip ${pair_id}.consensus.R1.fastq
     gzip ${pair_id}.consensus.R2.fastq
-    bwa mem -M -C -t 2 -R '@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}' /project/shared/bicf_workflow_ref/GRCh38/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz | samtools view -1 - > ${pair_id}.consensus.bam
+    bwa mem -M -C -t 2 -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" /project/shared/bicf_workflow_ref/GRCh38/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz | samtools view -1 - > ${pair_id}.consensus.bam
     samtools sort --threads 10 -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
 else
     cp ${sbam} ${pair_id}.dedup.bam    
