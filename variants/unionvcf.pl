@@ -24,12 +24,16 @@ foreach $vcf (@vcffiles) {
 	    if ($line =~ m/#CHROM/) {
 		($chromhd, $posd,$idhd,$refhd,$althd,$scorehd,
 		 $filterhd,$annothd,$formathd,@sampleids) = split(/\t/, $line);
+		foreach $j (0..$#sampleids) {
+		    $sampleids[$j] =~ s/\.final//g;
+		}
 		unless (@sampleorder) {
 		    @sampleorder = @sampleids;
 		    print OUT $line,"\n";
 		}
 		next;
 	    }
+	    next;
 	}
 	my ($chrom, $pos,$id,$ref,$alt,$score,
 	    $filter,$annot,$format,@gts) = split(/\t/, $line);
@@ -55,7 +59,7 @@ foreach $vcf (@vcffiles) {
 	  foreach my $i (0..$#deschead) {
 	      $gtdata{$deschead[$i]} = $gtinfo[$i];
 	  }
-	  if ($gtdata{DP} == 0 || $gtdata{GT} eq './.') {
+	  if ($gtdata{GT} eq './.') {
 	      $newgts{$sid} = '.:.:.:.:.';
 	      $missingGT ++;
 	      next FG;
@@ -71,6 +75,7 @@ foreach $vcf (@vcffiles) {
 	      $gtdata{DP} = $gtdata{NR}; 	
 	      $gtdata{AO} = $gtdata{NV};
 	      $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	      $gtdata{AD} = join(",",$gtdata{RO},$gtdata{AO})
 	  } elsif (exists $gtdata{AO} && exists $gtdata{RO}) {
 	      $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
 	      $gtdata{DP} = $gtdata{RO};
