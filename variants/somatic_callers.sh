@@ -83,7 +83,7 @@ if [ $algo == 'varscan' ]
   then
     module load python/2.7.x-anaconda bedtools/2.25.0 snpeff/4.2 bcftools/intel/1.3 samtools/intel/1.3 VarScan/2.4.2 speedseq/20160506 vcftools/0.1.14
     sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${tumor}.final.bam --samtools "-C 50 -f ${genome_reference}"  > t.mpileup
-    sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${normal} --samtools "-C 50 -f ${genome_reference}"  > n.mpileup
+    sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${normal}.final.bam --samtools "-C 50 -f ${genome_reference}"  > n.mpileup
     VarScan somatic n.mpileup t.mpileup ${tumor}.vscan --output-vcf 1
     VarScan copynumber n.mpileup t.mpileup ${tumor}.vscancnv 
     vcf-concat ${tumor}.vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe 's/TUMOR/'${tumor}'/' | perl -pe 's/NORMAL/'${normal}'/g' |bedtools intersect -header -a stdin -b ${target_bed} |bgzip > ${tumor}_${normal}.varscan.vcf.gz
