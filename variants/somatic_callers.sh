@@ -50,16 +50,16 @@ if [ $algo == 'strelka2' ]
     strelka_analysisPath=StrelkaAnalysisPath
     mkdir ${manta_analysisPath}
     mkdir ${strelka_analysisPath}
-    /cm/shared/apps/manta/1.2.0/bin/configManta.py --normalBam ${normal}.bam --tumorBam ${tumor}.bam --referenceFasta ${genome_reference} --runDir ${manta_analysisPath}
+    /cm/shared/apps/manta/1.2.0/bin/configManta.py --normalBam ${normal}.final.bam --tumorBam ${tumor}.final.bam --referenceFasta ${genome_reference} --runDir ${manta_analysisPath}
     ${manta_analysisPath}/runWorkflow.py -m local -j 8
-    /cm/shared/apps/strelka/2.8.3/bin/configureStrelkaSomaticWorkflow.py --normalBam ${normal}.bam --tumorBam ${tumor}.bam --referenceFasta ${genome_reference} --targeted --indelCandidates ${manta_analysisPath}/results/variants/candidateSmallIndels.vcf.gz --runDir ${strelka_analysisPath}
+    /cm/shared/apps/strelka/2.8.3/bin/configureStrelkaSomaticWorkflow.py --normalBam ${normal}.final.bam --tumorBam ${tumor}.final.bam --referenceFasta ${genome_reference} --targeted --indelCandidates ${manta_analysisPath}/results/variants/candidateSmallIndels.vcf.gz --runDir ${strelka_analysisPath}
     ${strelka_analysisPath}/runWorkflow.py -m local -j 8 
 fi
 
 if [ $algo == 'virmid' ]
   then 
     module load python/2.7.x-anaconda bedtools/2.25.0 snpeff/4.2 virmid/1.2 vcftools/0.1.14
-    virmid -R ${genome_reference} -D ${tumor}.bam -N ${normal}.bam -s ${cosmic_reference} -t $SLURM_CPUS_ON_NODE -M 2000 -c1 10 -c2 10
+    virmid -R ${genome_reference} -D ${tumor}.final.bam -N ${normal}.final.bam -s ${cosmic_reference} -t $SLURM_CPUS_ON_NODE -M 2000 -c1 10 -c2 10
     perl /project/PHG/PHG_Clinical/clinseq_workflows/scripts/addgt_virmid.pl ${tumor}.final.bam.virmid.som.passed.vcf
     perl /project/PHG/PHG_Clinical/clinseq_workflows/scripts/addgt_virmid.pl ${tumor}.final.bam.virmid.loh.passed.vcf
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe 's/TUMOR/'${tumor}'/' | perl -pe 's/NORMAL/'${normal}'/g' |bedtools intersect -header -a stdin -b ${target_bed} |bgzip > ${tumor}_${normal}.virmid.vcf.gz
@@ -83,7 +83,7 @@ if [ $algo == 'varscan' ]
   then
     module load python/2.7.x-anaconda bedtools/2.25.0 snpeff/4.2 bcftools/intel/1.3 samtools/intel/1.3 VarScan/2.4.2 speedseq/20160506 vcftools/0.1.14
     sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${tumor}.final.bam --samtools "-C 50 -f ${genome_reference}"  > t.mpileup
-    sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${normal} --samtools "-C 50 -f ${genome_reference}"  > n.mpileup
+    sambamba mpileup -L ${target_bed} -t $SLURM_CPUS_ON_NODE ${normal}.final.bam --samtools "-C 50 -f ${genome_reference}"  > n.mpileup
     VarScan somatic n.mpileup t.mpileup ${tumor}.vscan --output-vcf 1
     VarScan copynumber n.mpileup t.mpileup ${tumor}.vscancnv 
     vcf-concat ${tumor}.vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe 's/TUMOR/'${tumor}'/' | perl -pe 's/NORMAL/'${normal}'/g' |bedtools intersect -header -a stdin -b ${target_bed} |bgzip > ${tumor}_${normal}.varscan.vcf.gz
