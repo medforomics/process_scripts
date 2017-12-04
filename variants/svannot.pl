@@ -54,7 +54,7 @@ while (my $line = <IN>) {
   next unless ($impact && $impact =~ m/HIGH|MODERATE/);
   next unless ($gene);
   next if ($done{$chrom}{$pos});
-  $done{$chrom}{$pos} = 1
+  $done{$chrom}{$pos} = 1;
   @deschead = split(":",$format);
  F1:foreach $sample (@subjacc) {
      my $allele_info = shift @gts;
