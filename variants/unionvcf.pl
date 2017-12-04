@@ -98,6 +98,9 @@ foreach $vcf (@vcffiles) {
     close VCF;
 }
 my @callers = ('ssvar','platypus','sam','gatk','hotspot');
+if (grep(/mutect/,@vcffiles)) {
+    @callers = ('sssom','pmutect','shimmer','stelka','varscan','virmid');
+}
  F1:foreach $chr (sort {$a cmp $b} keys %lines) {
    F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
        my $callset = join(",",keys %{$lines{$chr}{$pos}});
