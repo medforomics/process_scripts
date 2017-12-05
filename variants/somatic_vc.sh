@@ -105,7 +105,7 @@ fi
 if [ $algo == 'mutect2' ]
 then
   module load parallel gatk/3.7 snpeff/4.3q vcftools/0.1.14
-  cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 30 -stand_emit_conf 10.0 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
+  cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
   vcf-concat ${tid}*.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar \$SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe 's/TUMOR/${tid}/' | perl -pe 's/NORMAL/${nid}/g' |bgzip > ${pair_id}.pmutect.vcf.gz
 fi
 
@@ -130,5 +130,6 @@ fi
 if [ $algo == 'lancet' ]
 then
     module load snpeff/4.3q lancet vcftools/0.1.14
-    lancet --tumor ${tumor} --normal ${normal} --ref $reffa --bed $target_panel --num-threads 16 > out.vcf
-    vcf-concat out.vcf | vcf-sort | vcf-annotate -n --fill-type -n | perl -pe 's/TUMOR/${tid}/' | perl -pe 's/NORMAL/${nid}/g' |bedtools intersect -header -a stdin -b $target_panel |bgzip > ${tid}_${nid}.lancet.vcf.gz
+    lancet --tumor ${tumor} --normal ${normal} --ref $reffa --bed $target_panel --num-threads 16 > lancet.vcf
+    vcf-sort lancet.vcf | vcf-annotate -n --fill-type -n | perl -pe 's/TUMOR/${tid}/' | perl -pe 's/NORMAL/${nid}/g' |bgzip > ${pair_id}.lancet.vcf.gz
+fi

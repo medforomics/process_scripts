@@ -135,5 +135,3 @@ java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/sn
 perl $baseDir/svannot.pl -i ${pair_id}.sv.annot.vcf
 bgzip ${pair_id}.sv.annot.vcf
 tabix ${pair_id}.sv.annot.vcf.gz
-
-fi
