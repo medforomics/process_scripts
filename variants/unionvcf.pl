@@ -15,7 +15,7 @@ my @sampleorder;
 
 my %headerlines;
 foreach $vcf (@vcffiles) {
-    $caller = (split(/\./,$vcf))[1];
+    $caller = (split(/\./,$vcf))[-3];
     open VCF, "gunzip -c $vcf|" or die $!;
     my @sampleids;
     while (my $line = <VCF>) {

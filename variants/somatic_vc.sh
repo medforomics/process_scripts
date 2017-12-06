@@ -12,12 +12,14 @@ usage(){
   echo "-y --TumorID"
   echo "-i --NormalBAM used for Mantra in the case of UMI consensus"
   echo "-j --TumorBAM used for Mantra in the case of UMI consensus"
+  echo "-b --TargetBed"
+  
   echo "Example: bash somatic_vc.sh -a strelka2 -y ORD1_N_panel1385 -y ORD1_T_panel138 -n ORD1_N_panel1385.final.bam -t ORD1_T_panel1385.final.bam"
   exit 1
 }
 
 OPTIND=1 # Reset OPTIND
-while getopts :n:t:r:x:y:i:j:a:h opt
+while getopts :n:t:r:x:y:i:j:a:b:h opt
 do
     case $opt in 
       r) index_path=$OPTARG;;
@@ -28,6 +30,7 @@ do
       i) mnormal=$OPTARG;;
       j) mtumor=$OPTARG;;
       a) algo=$OPTARG;;
+      b) tbed=$OPTARG;; 
       h) usage;;
     esac
 done
@@ -130,6 +133,6 @@ fi
 if [ $algo == 'lancet' ]
 then
     module load snpeff/4.3q lancet vcftools/0.1.14
-    lancet --tumor ${tumor} --normal ${normal} --ref $reffa --bed $target_panel --num-threads 16 > lancet.vcf
+    lancet --tumor ${tumor} --normal ${normal} --ref $reffa -B $tbed --num-threads 16 > lancet.vcf
     vcf-sort lancet.vcf | vcf-annotate -n --fill-type -n | perl -pe 's/TUMOR/${tid}/' | perl -pe 's/NORMAL/${nid}/g' |bgzip > ${pair_id}.lancet.vcf.gz
 fi

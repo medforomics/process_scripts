@@ -86,12 +86,12 @@ fi
 #MERGE DELLY AND MAKE BED
 
 bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
-perl $baseDir/vcf2bed.sv.pl delly.vcf > delly.bed
+perl $baseDir/vcf2bed.sv.pl delly.vcf | sort -V -k 1,1 -k 2,2n > delly.bed
 bgzip delly.vcf
 if [[ -n ${normal} ]]
 then
     tabix delly.vcf.gz
-    bcftools view -O z -o delly.vcf.gz -s ${keepid} ${pair_id}.delly.vcf.gz
+    bcftools view -O z -o ${pair_id}.delly.vcf.gz -s ${keepid} delly.vcf.gz
 else
     mv delly.vcf.gz ${pair_id}.delly.vcf.gz
 fi
@@ -110,19 +110,21 @@ then
     gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o normal.splitters.bam -
     gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o normal.discordants.bam -
     speedseq sv -t $SLURM_CPUS_ON_NODE -o sssv -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
-    bcftools view -O z -o sssv.vcf.gz -s ${keepid} ${pair_id}.sssv.sv.vcf.gz 
+    java -jar $SNPEFF_HOME/SnpSift.jar filter -n "GEN[0].SU > 1" sssv.sv.vcf.gz |bgzip > tumor.sssv.sv.vcf.gz
+    tabix tumor.sssv.sv.vcf.gz
+    bcftools view -O z -o ${pair_id}.sssv.sv.vcf.gz -s ${keepid} tumor.sssv.sv.vcf.gz
 else
     speedseq sv -t $SLURM_CPUS_ON_NODE -o ${pair_id}.sssv -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
 fi
 
-java -jar $SNPEFF_HOME/SnpSift.jar filter "GEN[0].SU > 2" ${pair_id}.sssv.sv.vcf.gz > lumpy.vcf
+java -jar $SNPEFF_HOME/SnpSift.jar filter "GEN[0].SU > 10" ${pair_id}.sssv.sv.vcf.gz > lumpy.vcf
 perl $baseDir/vcf2bed.sv.pl lumpy.vcf > lumpy.bed
 
 #COMPARE DELLY & LUMPY
 if [[ -n ${normal} ]]
 then
   bedtools multiinter -cluster -header -names novobreak delly lumpy -i novobreak.bed delly.bed lumpy.bed > sv.intersect.bed 
-  grep novobreak sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v start | bedtools intersect -header -b stdin -a ${tid}_${nid}.novobreak.vcf.gz  | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
+  grep novobreak sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v start | bedtools intersect -header -b stdin -a ${pair_id}.novobreak.vcf.gz  | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
 else
   bedtools multiinter -cluster -header -names delly lumpy -i delly.bed lumpy.bed > sv.intersect.bed 
 fi

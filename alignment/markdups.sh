@@ -54,11 +54,10 @@ then
     java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'fgbio_umi' ]   
 then
+    module load fgbio
     samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
-    source activate fgbiotools
     fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -m 0
     fgbio CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
-    source deactivate
     module load bwa/intel/0.7.15
     samtools index ${pair_id}.consensus.bam
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
