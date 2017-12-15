@@ -50,13 +50,13 @@ fi
 module load  speedseq/20160506 novoBreak/v1.1.3 delly2/v0.7.7-multi samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 mkdir temp
 
-if [[ -n ${normal} ]]
-then
-  run_novoBreak.sh /cm/shared/apps/novoBreak/novoBreak_distribution_v1.1.3rc ${reffa} ${sbam} ${normal} $SLURM_CPUS_ON_NODE
-  perl $baseDir/vcf2bed.sv.pl novoBreak.pass.flt.vcf |sort -T temp -V -k 1,1 -k 2,2n > novobreak.bed
-  mv novoBreak.pass.flt.vcf ${pair_id}.novobreak.vcf
-  bgzip ${pair_id}.novobreak.vcf
-fi
+#if [[ -n ${normal} ]]
+#then
+  #run_novoBreak.sh /cm/shared/apps/novoBreak/novoBreak_distribution_v1.1.3rc ${reffa} ${sbam} ${normal} $SLURM_CPUS_ON_NODE
+  #perl $baseDir/vcf2bed.sv.pl novoBreak.pass.flt.vcf |sort -T temp -V -k 1,1 -k 2,2n > novobreak.bed
+  #mv novoBreak.pass.flt.vcf ${pair_id}.novobreak.vcf
+  #bgzip ${pair_id}.novobreak.vcf
+#fi
 if [[ -n ${normal} ]]
 then
   #RUN DELLY
@@ -121,13 +121,15 @@ java -jar $SNPEFF_HOME/SnpSift.jar filter "GEN[0].SU > 10" ${pair_id}.sssv.sv.vc
 perl $baseDir/vcf2bed.sv.pl lumpy.vcf > lumpy.bed
 
 #COMPARE DELLY & LUMPY
-if [[ -n ${normal} ]]
-then
-  bedtools multiinter -cluster -header -names novobreak delly lumpy -i novobreak.bed delly.bed lumpy.bed > sv.intersect.bed 
-  grep novobreak sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v start | bedtools intersect -header -b stdin -a ${pair_id}.novobreak.vcf.gz  | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
-else
-  bedtools multiinter -cluster -header -names delly lumpy -i delly.bed lumpy.bed > sv.intersect.bed 
-fi
+#if [[ -n ${normal} ]]
+#then
+  #bedtools multiinter -cluster -header -names novobreak delly lumpy -i novobreak.bed delly.bed lumpy.bed > sv.intersect.bed
+  #zcat ${pair_id}.novobreak.vcf.gz | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
+  #grep novobreak sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v start | bedtools intersect -header -b stdin -a ${pair_id}.novobreak.vcf.gz  | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
+#else
+#fi
+
+bedtools multiinter -cluster -header -names delly lumpy -i delly.bed lumpy.bed > sv.intersect.bed 
 grep delly sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v 'start' |grep -v 'novobreak' | bedtools intersect -header -b stdin -a ${pair_id}.delly.vcf.gz |bgzip > svt2.vcf.gz
 grep lumpy sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v 'start' |grep -v 'delly' |grep -v 'novobreak' | bedtools intersect -header -b stdin -a ${pair_id}.sssv.sv.vcf.gz |bgzip > svt3.vcf.gz
 
