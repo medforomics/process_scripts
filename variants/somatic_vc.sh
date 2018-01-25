@@ -82,13 +82,12 @@ if [ $algo == 'strelka2' ]
   then
     module load strelka/2.8.3 samtools/1.6 manta/1.2.0 snpeff/4.3q vcftools/0.1.14
     mkdir manta strelka
-    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --runDir manta
+    configManta.py --normalBam ${mnormal} --tumorBam ${mtumor} --referenceFasta ${reffa} --runDir manta
     manta/runWorkflow.py -m local -j 8
-    configureStrelkaSomaticWorkflow.py --normalBam ${mnormal} --tumorBam ${mtumor} --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    configureStrelkaSomaticWorkflow.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
     strelka/runWorkflow.py -m local -j 8
-    vcf-concat strelka/results/variants/*.vcf.gz | vcf-annotate -n --fill-type -n |vcf-sort |java -jar $SNPEFF_HOME/SnpSift.jar filter "((FILTER = 'PASS') & (GEN[*].DP >= 10))" | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.strelka.vcf.gz
+    vcf-concat strelka/results/variants/*.vcf.gz | vcf-annotate -n --fill-type -n |vcf-sort |java -jar $SNPEFF_HOME/SnpSift.jar filter "(GEN[*].DP >= 10)" | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.strelka2.vcf.gz
 fi
-
 if [ $algo == 'virmid' ]
   then 
     module load snpeff/4.3q virmid/1.2 samtools/1.6 vcftools/0.1.14
@@ -108,7 +107,12 @@ fi
 if [ $algo == 'mutect2' ]
 then
   module load parallel gatk/3.7 snpeff/4.3q samtools/1.6 vcftools/0.1.14
-  cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
+  if [ -z ${tbed} ]
+  then
+      cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
+  else
+      awk '{print $1":"$2"-"$3}' ${tbed} | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
+  fi	 
   vcf-concat ${tid}*mutect.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar \$SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.pmutect.vcf.gz
 fi
 

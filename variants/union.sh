@@ -31,8 +31,8 @@ calllist=''
 for i in *.vcf.gz; do
     if [[ $i == $HS ]]
     then
-	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a $i -b stdin |bgzip > hotspot.nooverlap.vcf.gz
-	list2="$list2 hotspot.nooverlap.vcf.gz"
+	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a $i -b stdin |bgzip > nooverlap.hotspot.vcf.gz
+	list2="$list2 nooverlap.hotspot.vcf.gz"
     fi
 done 
 

@@ -100,4 +100,17 @@ then
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
+elif [[ $algo == 'strelka2' ]]
+then
+    module load strelka/2.8.3 samtools/1.6 manta/1.2.0 snpeff/4.3q vcftools/0.1.14
+    mkdir manta strelka
+    gvcflist=''
+    for i in *.bam; do
+	gvcflist="$gvcflist --bam ${i}"
+    done
+    configManta.py $gvcflist --referenceFasta ${reffa} --exome --runDir manta
+    manta/runWorkflow.py -m local -j 8
+    configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    strelka/runWorkflow.py -m local -j 8
+    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi

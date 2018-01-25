@@ -48,10 +48,10 @@ then
     samtools markdup -s --output-fmt BAM -@ $SLURM_CPUS_ON_NODE sort.bam ${pair_id}.dedup.bam
 elif [ $algo == 'picard' ]
 then
-    java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
+    java -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard_umi' ]
 then
-    java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
+    java -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'fgbio_umi' ]   
 then
     module load fgbio bwa/intel/0.7.15

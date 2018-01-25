@@ -53,7 +53,8 @@ if [ $algo == 'strelka2' ]
     /cm/shared/apps/manta/1.2.0/bin/configManta.py --normalBam ${normal}.final.bam --tumorBam ${tumor}.final.bam --referenceFasta ${genome_reference} --runDir ${manta_analysisPath}
     ${manta_analysisPath}/runWorkflow.py -m local -j 8
     /cm/shared/apps/strelka/2.8.3/bin/configureStrelkaSomaticWorkflow.py --normalBam ${normal}.final.bam --tumorBam ${tumor}.final.bam --referenceFasta ${genome_reference} --targeted --indelCandidates ${manta_analysisPath}/results/variants/candidateSmallIndels.vcf.gz --runDir ${strelka_analysisPath}
-    ${strelka_analysisPath}/runWorkflow.py -m local -j 8 
+    ${strelka_analysisPath}/runWorkflow.py -m local -j 8
+    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi
 
 if [ $algo == 'virmid' ]

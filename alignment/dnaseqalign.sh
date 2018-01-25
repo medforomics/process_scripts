@@ -36,7 +36,7 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 
-module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 bcftools/1.6 htslib/1.6 picard/2.10.3
+module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 picard/2.10.3
 
 baseDir="`dirname \"$0\"`"
 
