@@ -25,11 +25,12 @@ foreach $vcf (@vcffiles) {
 	($chromhd, $posd,$idhd,$refhd,$althd,$scorehd,
 	 $filterhd,$annothd,$formathd,@sampleids) = split(/\t/, $line);
 	foreach $j (0..$#sampleids) {
-	  $sampleids[$j] =~ s/\.final//g;
+	    $sampleids[$j] = (split(/\./,$sampleids[$j]))[0];
 	}
 	unless (@sampleorder) {
 	  @sampleorder = @sampleids;
-	  print OUT $line,"\n";
+	  print OUT join("\t",$chromhd, $posd,$idhd,$refhd,$althd,$scorehd,
+			 $filterhd,$annothd,$formathd,@sampleids),"\n";
 	}
 	next;
       }
@@ -37,9 +38,6 @@ foreach $vcf (@vcffiles) {
     }
     my ($chrom, $pos,$id,$ref,$alt,$score,
 	$filter,$annot,$format,@gts) = split(/\t/, $line);
-    if ($pos == 48303944) {
-      warn "Debugging\n";
-    }
     my %hash = ();
     foreach $a (split(/;/,$annot)) {
       my ($key,$val) = split(/=/,$a);

@@ -35,7 +35,7 @@ for i in *.vcf.gz; do
 	list2="$list2 nooverlap.hotspot.vcf.gz"
     fi
 done 
-
+#echo "$baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2"
 perl $baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2
 perl $baseDir/vcfsorter.pl ${index_path}/genome.dict int.vcf |bgzip > ${pair_id}.union.vcf.gz
 
