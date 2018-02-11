@@ -33,6 +33,7 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
+source /etc/profile.d/modules.sh
 module load  samtools/gcc/1.6 picard/2.10.3
 baseDir="`dirname \"$0\"`"
 if [[ -z $SLURM_CPUS_ON_NODE ]]

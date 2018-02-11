@@ -38,6 +38,9 @@ foreach $vcf (@vcffiles) {
     }
     my ($chrom, $pos,$id,$ref,$alt,$score,
 	$filter,$annot,$format,@gts) = split(/\t/, $line);
+    if ($pos eq '90088702') {
+	warn "allele frequency\n";
+    }
     my %hash = ();
     foreach $a (split(/;/,$annot)) {
       my ($key,$val) = split(/=/,$a);
@@ -65,14 +68,20 @@ foreach $vcf (@vcffiles) {
 	$missingGT ++;
 	next FG;
       }
-      if ($gtdata{AD}){
+      if ($gtdata{DP4}) { #varscan uses this
+	  my ($ref_fwd,$ref_rev,$alt_fwd,$alt_rev) = split(',',$gtdata{DP4});
+	  $gtdata{AO} = $alt_fwd+$alt_rev;
+	  $gtdata{RO} = $ref_fwd+$ref_rev;
+	  $gtdata{DP} = $ref_fwd+$ref_rev+$alt_fwd+$alt_rev;
+	  $gtdata{AD} = join(",",$gtdata{RO},$gtdata{AO});
+      }elsif ($gtdata{AD} && $gtdata{AD} =~ m/,/){
 	($gtdata{RO},@alts) = split(/,/,$gtdata{AD});
 	$gtdata{AO} = join(",",@alts);
 	$gtdata{DP} = $gtdata{RO};
 	foreach (@alts) {
 	  $gtdata{DP} += $_;
 	}
-      } elsif (exists $gtdata{NR} && exists $gtdata{NV}) {
+      } elsif (exists $gtdata{NR} && exists $gtdata{NV}) { #platypus uses this
 	$gtdata{DP} = $gtdata{NR}; 	
 	$gtdata{AO} = $gtdata{NV};
 	$gtdata{RO} = $gtdata{DP} - $gtdata{AO};

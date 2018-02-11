@@ -21,8 +21,16 @@ do
 done
 function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
+
+source /etc/profile.d/modules.sh
 module load python/2.7.x-anaconda bedtools/2.26.0 samtools/1.6 snpeff/4.3q
-if  [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
+
+if [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38/hisat_index' ]]
+then
+    index_path='/project/shared/bicf_workflow_ref/GRCh38'
+fi
+
+if  [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]] 
 then
     tabix ${unionvcf}
     bcftools annotate -Oz -a ${index_path}/ExAC.vcf.gz -o ${pair_id}.exac.vcf.gz --columns CHROM,POS,AC_Het,AC_Hom,AC_Hemi,AC_Adj,AN_Adj,AC_POPMAX,AN_POPMAX,POPMAX ${unionvcf}

@@ -5,17 +5,19 @@ usage() {
   echo "-h Help documentation for gatkrunner.sh"
   echo "-r  --Path to Reference Genome with the file genome.fa"
   echo "-p  --Prefix for output file name"
-  echo "-a  --Algorithm/Command: gatk, mpileup, speedseq, platypus "
+  echo "-a  --Algorithm/Command: gatk, mpileup, speedseq, platypus"
+  echo "-t  --RNASeq Data"
   echo "Example: bash hisat.sh -p prefix -r /path/GRCh38 -a gatk"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:a:b:p:h opt
+while getopts :r:a:b:p:th opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         a) algo=$OPTARG;;
+	t) rna=1;;
         h) usage;;
     esac
 done
@@ -53,6 +55,8 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
+
+source /etc/profile.d/modules.sh
 module load python/2.7.x-anaconda picard/2.10.3 samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
 for i in *.bam; do
@@ -102,15 +106,21 @@ then
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 elif [[ $algo == 'strelka2' ]]
 then
+    if [[ $rna==1 ]]
+    then
+	mode="--rna"
+    else
+	mode="--exome"
+    fi
     module load strelka/2.8.3 samtools/1.6 manta/1.2.0 snpeff/4.3q vcftools/0.1.14
     mkdir manta strelka
     gvcflist=''
     for i in *.bam; do
 	gvcflist="$gvcflist --bam ${i}"
     done
-    configManta.py $gvcflist --referenceFasta ${reffa} --exome --runDir manta
+    configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
     manta/runWorkflow.py -m local -j 8
-    configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
     strelka/runWorkflow.py -m local -j 8
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi

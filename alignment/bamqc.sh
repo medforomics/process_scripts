@@ -31,6 +31,7 @@ shift $(($OPTIND -1))
 #    usage
 #fi
 
+source /etc/profile.d/modules.sh
 module load samtools/1.6 fastqc/0.11.5
 samtools flagstat ${sbam} > ${pair_id}.flagstat.txt
 fastqc -f bam ${sbam}

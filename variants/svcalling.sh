@@ -46,7 +46,7 @@ else
     usage
 
 fi
-
+source /etc/profile.d/modules.sh	
 module load  speedseq/20160506 novoBreak/v1.1.3 delly2/v0.7.7-multi samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 mkdir temp
 

@@ -8,38 +8,59 @@ while (my $line = <OM>) {
   $keep{$line} = 1;
 }
 
-#my @keep = ("AKT2","ATM","AURKA","BAP1","BCL2L1","BCL6","BIRC3","BRCA2","CCND1","CCNE1","CD79B","CDK8","CDKN2A","CDKN2B","CEBPA","EGFR","ERBB2","FGF10","FGF14","FGF19","FGF3","FGF4","FLT1","FLT3","FOXP1","GATA6","GNA13","GNAS","IKZF1","IL7R","IRS2","KDM4C","KLHL6","KMT2A","KRAS","LYN","MCL1","MITF","MYC","NOTCH2","PIK3CA","PRKAR1A","PRKDC","PTEN","RB1","RICTOR","RUNX1T1","SDHA","TFDP1","TP53","ZNF217","CDK4","MDM4","MYCN","BTG2","BCL2L2","RAF1");
-
-#my %keep = map {$_ => 1} @keep;
-
-
-my @cvncalls = @ARGV;
-foreach my $file (@ARGV) {
-    open IN, "<$file" or die $!;
-    my $out = $file;
-    $out =~ s/call.cns/cnvcalls.txt/;
-    open OUT, ">$out" or die $!;
-    print OUT join("\t","Gene","Chromosome","Start","End","Abberation Type","CN","Score"),"\n";
-    my $header = <IN>;
-    while (my $line = <IN>) {
-	chomp($line);
-	my ($chr,$start,$end,$geneids,$log2,$cn,$depth,
-	    $probes,$weight) = split(/\t/,$line);
-	my %genes;
-	my @ids = split(/;|,/,$geneids);
-	foreach my $gid (@ids) {
-	    my ($key,$value) = split(/=/,$gid);
-	    if ($key eq 'ensembl_gn' || $key eq 'identifier') {
-		$genes{$value} = 1 if $keep{$value};
-	    }
-	}
-	my $newgeneids = join(";", keys %genes);
-	my $len = sprintf("%.1f",($end-$start)/1000);
-	next if ($cn == 2) || scalar(keys %genes) < 1;
-	my $abtype = 'amplification';
-	$abtype = 'loss' if ($cn < 2);
-	print OUT join("\t",$newgeneids,$chr,$start,$end,$abtype,$cn,$weight),"\n";
-    }
-    close IN;
-    close OUT;
+open ENT_ENS, "</project/shared/bicf_workflow_ref/gene2ensembl.human.txt" or die $!;
+my %entrez;
+my $ent_header = <ENT_ENS>;
+while (my $line = <ENT_ENS>){
+  chomp $line;
+  my @row = split(/\t/, $line);
+  $entrez{$row[2]}=$row[1];
 }
+close ENT_ENS;
+open ENT_SYM, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
+my %entrez;
+my $ent_header = <ENT_ENS>;
+while (my $line = <ENT_ENS>){
+  chomp $line;
+  my @row = split(/\t/, $line);
+  $entrez{$row[2]}=$row[1];
+}
+close ENT_SYM;
+
+my $file = shift @ARGV;
+my $prefix = (split(/\./,(split(/\//,$file))[0]))[0];
+
+open OUT, ">$prefix\.cnvcalls.txt" or die $!;
+open BIO, ">$prefix\.data_cna_cbioportal.txt" or die $!;
+print OUT join("\t","Gene","Chromosome","Start","End","Abberation Type","CN","Score"),"\n";
+print BIO join("\t","Hugo_Symbol","Entrez_Gene_Id",$prefix),"\n";
+
+open IN, "<$file" or die $!;
+my $header = <IN>;
+while (my $line = <IN>) {
+    chomp($line);
+    my ($chr,$start,$end,$geneids,$log2,$cn,$depth,
+	$probes,$weight) = split(/\t/,$line);
+    my %genes;
+    my @ids = split(/;|,/,$geneids);
+    foreach my $gid (@ids) {
+	my ($key,$value) = split(/=/,$gid);
+	if ($key eq 'ensembl_gn' || $key eq 'identifier') {
+	    $genes{$value} = 1 if $keep{$value};
+	}
+    }
+    my $newgeneids = join(";", keys %genes);
+    my $len = sprintf("%.1f",($end-$start)/1000);
+    next if ($cn == 2) || scalar(keys %genes) < 1;
+    my $abtype = 'amplification';
+    $abtype = 'loss' if ($cn < 2);
+    foreach $gene (keys %gene) {
+	$cn_cbio = $cn -2;
+	$cn_cbio = 2 if ($cn > 4);
+	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
+    }
+    print OUT join("\t",$newgeneids,$chr,$start,$end,$abtype,$cn,$weight),"\n";
+}
+close IN;
+close OUT;
+close BIO;

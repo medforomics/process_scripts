@@ -30,6 +30,8 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 baseDir="`dirname \"$0\"`"
+
+source /etc/profile.d/modules.sh
 module load cnvkit/0.9.0
 cnvkit.py coverage ${sbam} /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.cnvkit_targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.cnvkit_antitargets.bed -o ${pair_id}.antitargetcoverage.cnn

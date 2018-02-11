@@ -36,6 +36,7 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 
+source /etc/profile.d/modules.sh
 module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 picard/2.10.3
 
 baseDir="`dirname \"$0\"`"
@@ -56,7 +57,7 @@ then
 else 
     samtools view -1 -o output.unsort.bam out.sam
 fi
-
+which samtools
 samtools sort -n --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
 java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
 samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam

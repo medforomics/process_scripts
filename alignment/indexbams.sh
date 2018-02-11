@@ -24,6 +24,7 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
+source /etc/profile.d/modules.sh
 module load samtools/1.6
 for i in *.bam; do
     samtools index -@ $SLURM_CPUS_ON_NODE ${i}

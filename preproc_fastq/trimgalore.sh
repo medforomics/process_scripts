@@ -29,8 +29,9 @@ fi
 
 r1base="${fq1%.fastq*}"
 r2base="${fq2%.fastq*}"
-
+source /etc/profile.d/modules.sh
 module load trimgalore/0.4.1 cutadapt/1.9.1
+
 if [ $fq1 == $fq2 ]
 then
     trim_galore -q 25 --illumina --gzip --length 35 ${fq1}

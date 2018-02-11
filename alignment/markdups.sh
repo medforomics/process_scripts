@@ -33,6 +33,7 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
+source /etc/profile.d/modules.sh
 module load picard/2.10.3 samtools/1.6
 
 if [ $algo == 'sambamba' ]

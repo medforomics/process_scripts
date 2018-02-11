@@ -78,6 +78,9 @@ else
 fi
 baseDir="`dirname \"$0\"`"
 
+source /etc/profile.d/modules.sh
+
+
 if [ $algo == 'strelka2' ]
   then
     module load strelka/2.8.3 samtools/1.6 manta/1.2.0 snpeff/4.3q vcftools/0.1.14
@@ -113,7 +116,7 @@ then
   else
       awk '{print $1":"$2"-"$3}' ${tbed} | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
   fi	 
-  vcf-concat ${tid}*mutect.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar \$SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.pmutect.vcf.gz
+  vcf-concat ${tid}*mutect.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar \$SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.mutect.vcf.gz
 fi
 
 if [ $algo == 'varscan' ]
