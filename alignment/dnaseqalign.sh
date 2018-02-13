@@ -7,7 +7,7 @@ usage() {
   echo "-x  --FastQ R1"
   echo "-y  --FastQ R2"
   echo "-p  --Prefix for output file name"
-  echo "-u UMI"
+  echo "-u  --UMI"
   echo "Example: bash dnaseqalign.sh -p prefix -u 1 -r /project/shared/bicf_workflow_ref/GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
   exit 1
 }
