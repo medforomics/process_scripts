@@ -106,7 +106,7 @@ then
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 elif [[ $algo == 'strelka2' ]]
 then
-    if [[ $rna==1 ]]
+    if [[ $rna == 1 ]]
     then
 	mode="--rna"
     else

@@ -38,9 +38,6 @@ foreach $vcf (@vcffiles) {
     }
     my ($chrom, $pos,$id,$ref,$alt,$score,
 	$filter,$annot,$format,@gts) = split(/\t/, $line);
-    if ($pos eq '90088702') {
-	warn "allele frequency\n";
-    }
     my %hash = ();
     foreach $a (split(/;/,$annot)) {
       my ($key,$val) = split(/=/,$a);
@@ -107,7 +104,7 @@ foreach $vcf (@vcffiles) {
   }
   close VCF;
 }
-my @callers = ('ssvar','platypus','sam','gatk','strelka2','hotspot');
+my @callers = ('ssvar','sam','gatk','strelka2','platypus','hotspot');
 if (grep(/mutect/,@vcffiles)) {
     @callers = ('sssom','pmutect','shimmer','strelka2','varscan','virmid');
 }
