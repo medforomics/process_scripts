@@ -25,7 +25,7 @@ foreach $vcf (@vcffiles) {
 	($chromhd, $posd,$idhd,$refhd,$althd,$scorehd,
 	 $filterhd,$annothd,$formathd,@sampleids) = split(/\t/, $line);
 	foreach $j (0..$#sampleids) {
-	    $sampleids[$j] = (split(/\./,$sampleids[$j]))[0];
+	  $sampleids[$j] = (split(/\./,$sampleids[$j]))[0];
 	}
 	unless (@sampleorder) {
 	  @sampleorder = @sampleids;
@@ -43,6 +43,7 @@ foreach $vcf (@vcffiles) {
       my ($key,$val) = split(/=/,$a);
       $hash{$key} = $val;
     }
+    #next if (($hash{FS} && $hash{FS} > 60) || $filter =~ m/strandBias/i);
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my %newgts;
@@ -66,11 +67,11 @@ foreach $vcf (@vcffiles) {
 	next FG;
       }
       if ($gtdata{DP4}) { #varscan uses this
-	  my ($ref_fwd,$ref_rev,$alt_fwd,$alt_rev) = split(',',$gtdata{DP4});
-	  $gtdata{AO} = $alt_fwd+$alt_rev;
-	  $gtdata{RO} = $ref_fwd+$ref_rev;
-	  $gtdata{DP} = $ref_fwd+$ref_rev+$alt_fwd+$alt_rev;
-	  $gtdata{AD} = join(",",$gtdata{RO},$gtdata{AO});
+	my ($ref_fwd,$ref_rev,$alt_fwd,$alt_rev) = split(',',$gtdata{DP4});
+	$gtdata{AO} = $alt_fwd+$alt_rev;
+	$gtdata{RO} = $ref_fwd+$ref_rev;
+	$gtdata{DP} = $ref_fwd+$ref_rev+$alt_fwd+$alt_rev;
+	$gtdata{AD} = join(",",$gtdata{RO},$gtdata{AO});
       }elsif ($gtdata{AD} && $gtdata{AD} =~ m/,/){
 	($gtdata{RO},@alts) = split(/,/,$gtdata{AD});
 	$gtdata{AO} = join(",",@alts);
@@ -79,9 +80,12 @@ foreach $vcf (@vcffiles) {
 	  $gtdata{DP} += $_;
 	}
       } elsif (exists $gtdata{NR} && exists $gtdata{NV}) { #platypus uses this
-	$gtdata{DP} = $gtdata{NR}; 	
+	$gtdata{DP} = (split(/,/,$gtdata{NR}))[0]; 	
 	$gtdata{AO} = $gtdata{NV};
-	$gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	$gtdata{RO} = $gtdata{DP};	
+	foreach $altct (split(/,/,$gtdata{NV})) {
+	  $gtdata{RO} -= $altct;
+	}
 	$gtdata{AD} = join(",",$gtdata{RO},$gtdata{AO})
       } elsif (exists $gtdata{AO} && exists $gtdata{RO}) {
 	$gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
@@ -106,21 +110,21 @@ foreach $vcf (@vcffiles) {
 }
 my @callers = ('ssvar','sam','gatk','strelka2','platypus','hotspot');
 if (grep(/mutect/,@vcffiles)) {
-    @callers = ('sssom','pmutect','shimmer','strelka2','varscan','virmid');
+  @callers = ('sssom','pmutect','shimmer','strelka2','varscan','virmid');
 }
- F1:foreach $chr (sort {$a cmp $b} keys %lines) {
-   F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
-       my $callset = join(",",keys %{$lines{$chr}{$pos}});
-     F3:foreach $caller (@callers) {
-	 if ($lines{$chr}{$pos}{$caller}) {
-	     my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,
-		 $format,@gts) = split(/\t/,$lines{$chr}{$pos}{$caller});
-	     $annot = $annot.";CallSet=".$callset;
-	     print OUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,
-			    $filter,$annot,$format,@gts),"\n";
-	     last F3;
-	 }
-     }
-   }
+F1:foreach $chr (sort {$a cmp $b} keys %lines) {
+ F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
+    my $callset = join(",",keys %{$lines{$chr}{$pos}});
+  F3:foreach $caller (@callers) {
+      if ($lines{$chr}{$pos}{$caller}) {
+	my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,
+	    $format,@gts) = split(/\t/,$lines{$chr}{$pos}{$caller});
+	$annot = $annot.";CallSet=".$callset;
+	print OUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,
+		       $filter,$annot,$format,@gts),"\n";
+	last F3;
+      }
+    }
+  }
 }
 close OUT;
