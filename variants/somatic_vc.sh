@@ -116,7 +116,7 @@ then
   else
       awk '{print $1":"$2"-"$3}' ${tbed} | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
   fi	 
-  vcf-concat ${tid}*mutect.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar \$SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.mutect.vcf.gz
+  vcf-concat ${tid}*mutect.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.mutect.vcf.gz
 fi
 
 if [ $algo == 'varscan' ]
@@ -133,7 +133,7 @@ if [ $algo == 'shimmer' ]
 then
     module load snpeff/4.3q shimmer/0.1.1 samtools/1.6  vcftools/0.1.14
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
-    perl /project/PHG/PHG_Clinical/clinseq_workflows/scripts/add_readct_shimmer.pl
+    perl $baseDir/add_readct_shimmer.pl
     vcf-annotate -n --fill-type shimmer/somatic_diffs.readct.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter '(GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.shimmer.vcf.gz
 fi
 
