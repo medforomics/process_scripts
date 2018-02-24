@@ -39,7 +39,7 @@ module load picard/2.10.3 samtools/1.6
 if [ $algo == 'sambamba' ]
 then
     module load speedseq/20160506
-    sambamba markdup -t $SLURM_CPUS_ON_NODE -r ${sbam} ${pair_id}.dedup.bam
+    sambamba markdup -t $SLURM_CPUS_ON_NODE ${sbam} ${pair_id}.dedup.bam
 elif [ $algo == 'samtools' ]
 then
     module load samtools/1.6
