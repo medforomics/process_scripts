@@ -18,9 +18,8 @@ while (my $line = <ENT_ENS>){
 }
 close ENT_ENS;
 open ENT_SYM, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
-my %entrez;
-my $ent_header = <ENT_ENS>;
-while (my $line = <ENT_ENS>){
+$ent_header = <ENT_SYM>;
+while (my $line = <ENT_SYM>){
   chomp $line;
   my @row = split(/\t/, $line);
   $entrez{$row[2]}=$row[1];
@@ -49,17 +48,16 @@ while (my $line = <IN>) {
 	    $genes{$value} = 1 if $keep{$value};
 	}
     }
-    my $newgeneids = join(";", keys %genes);
     my $len = sprintf("%.1f",($end-$start)/1000);
     next if ($cn == 2) || scalar(keys %genes) < 1;
     my $abtype = 'amplification';
     $abtype = 'loss' if ($cn < 2);
-    foreach $gene (keys %gene) {
+    foreach $gene (keys %genes) {
 	$cn_cbio = $cn -2;
 	$cn_cbio = 2 if ($cn > 4);
 	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
+	print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
     }
-    print OUT join("\t",$newgeneids,$chr,$start,$end,$abtype,$cn,$weight),"\n";
 }
 close IN;
 close OUT;
