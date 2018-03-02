@@ -8,23 +8,25 @@ usage(){
   echo "-r  --Path to Reference Genome with the file genome.fa"
   echo "-n --Normal"
   echo "-t --Tumor"
+  echo "-p -- PairID"
   echo "-x --NormalID"
   echo "-y --TumorID"
   echo "-i --NormalBAM used for Mantra in the case of UMI consensus"
   echo "-j --TumorBAM used for Mantra in the case of UMI consensus"
   echo "-b --TargetBed"
   
-  echo "Example: bash somatic_vc.sh -a strelka2 -y ORD1_N_panel1385 -y ORD1_T_panel138 -n ORD1_N_panel1385.final.bam -t ORD1_T_panel1385.final.bam"
+  echo "Example: bash somatic_vc.sh -a strelka2 -p subj1 -y ORD1_N_panel1385 -y ORD1_T_panel138 -n ORD1_N_panel1385.final.bam -t ORD1_T_panel1385.final.bam"
   exit 1
 }
 
 OPTIND=1 # Reset OPTIND
-while getopts :n:t:r:x:y:i:j:a:b:h opt
+while getopts :n:t:p:r:x:y:i:j:a:b:h opt
 do
     case $opt in 
       r) index_path=$OPTARG;;
       x) tid=$OPTARG;;
       y) nid=$OPTARG;;
+      p) pair_id=$OPTARG;;
       n) normal=$OPTARG;;
       t) tumor=$OPTARG;;
       i) mnormal=$OPTARG;;
@@ -46,7 +48,7 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
   then 
     SLURM_CPUS_ON_NODE=1
 fi
-pair_id=${tid}_${nid}
+#pair_id=${tid}_${nid}
 if [[ -z $mtumor ]]
 then
     mtumor=tumor

@@ -110,7 +110,7 @@ foreach $vcf (@vcffiles) {
 }
 my @callers = ('ssvar','sam','gatk','strelka2','platypus','hotspot');
 if (grep(/mutect/,@vcffiles)) {
-  @callers = ('sssom','pmutect','shimmer','strelka2','varscan','virmid');
+  @callers = ('sssom','mutect','shimmer','strelka2','varscan','virmid');
 }
 F1:foreach $chr (sort {$a cmp $b} keys %lines) {
  F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
