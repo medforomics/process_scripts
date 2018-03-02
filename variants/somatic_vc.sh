@@ -85,7 +85,7 @@ source /etc/profile.d/modules.sh
 
 if [ $algo == 'strelka2' ]
   then
-    module load strelka/2.9.0 samtools/1.6 manta/1.3.1 snpeff/4.3q vcftools/0.1.14
+    module load strelka/2.8.3 samtools/1.6 manta/1.2.0 snpeff/4.3q vcftools/0.1.14
     mkdir manta strelka
     configManta.py --normalBam ${mnormal} --tumorBam ${mtumor} --referenceFasta ${reffa} --runDir manta
     manta/runWorkflow.py -m local -j 8
