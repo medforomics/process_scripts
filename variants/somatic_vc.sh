@@ -95,10 +95,11 @@ if [ $algo == 'strelka2' ]
 fi
 if [ $algo == 'virmid' ]
   then 
-    module load snpeff/4.3q virmid/1.2 samtools/1.6 vcftools/0.1.14
+    module load virmid/1.2 samtools/1.6 vcftools/0.1.14
     virmid -R ${reffa} -D ${tumor} -N ${normal} -s ${cosmic} -t $SLURM_CPUS_ON_NODE -M 2000 -c1 10 -c2 10
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.som.passed.vcf
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.loh.passed.vcf
+    module load snpeff/4.3q
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
 fi
 
@@ -123,12 +124,13 @@ fi
 
 if [ $algo == 'varscan' ]
 then
-  module load snpeff/4.3q samtools/1.6 VarScan/2.4.2 speedseq/20160506 vcftools/0.1.14
+  module load samtools/1.6 VarScan/2.4.2 speedseq/20160506 vcftools/0.1.14
   sambamba mpileup --tmpdir=./ -t $SLURM_CPUS_ON_NODE ${tumor} --samtools "-C 50 -f ${reffa}"  > t.mpileup
   sambamba mpileup --tmpdir=./ -t $SLURM_CPUS_ON_NODE ${normal} --samtools "-C 50 -f ${reffa}"  > n.mpileup
   VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
-  VarScan copynumber n.mpileup t.mpileup vscancnv 
-  vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${tid}_${nid}.varscan.vcf.gz
+  VarScan copynumber n.mpileup t.mpileup vscancnv
+  module load snpeff/4.3q 
+  vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
 fi
 
 if [ $algo == 'shimmer' ]
