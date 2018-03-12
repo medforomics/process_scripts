@@ -2,13 +2,13 @@
 #parse_cnvkit_table.pl
 
 my $refdir = '/project/shared/bicf_workflow_ref/GRCh38/';
-open OM, "<$refdir\/panel1385.genelist.txt" or die $!;
+open OM, "<$refdir\/clinseq_prj/panel1385.genelist.txt" or die $!;
 while (my $line = <OM>) {
   chomp($line);
   $keep{$line} = 1;
 }
 
-open ENT_ENS, "</project/shared/bicf_workflow_ref/gene2ensembl.human.txt" or die $!;
+open ENT_ENS, "<$refdir/../gene2ensembl.human.txt" or die $!;
 my %entrez;
 my $ent_header = <ENT_ENS>;
 while (my $line = <ENT_ENS>){
@@ -17,7 +17,7 @@ while (my $line = <ENT_ENS>){
   $entrez{$row[2]}=$row[1];
 }
 close ENT_ENS;
-open ENT_SYM, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
+open ENT_SYM, "<$refdir/../gene_info.human.txt" or die $!;
 $ent_header = <ENT_SYM>;
 while (my $line = <ENT_SYM>){
   chomp $line;
