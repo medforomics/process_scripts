@@ -21,6 +21,8 @@ done
 
 shift $(($OPTIND -1))
 
+index_path='/project/shared/bicf_workflow_ref/GRCh38/clinseq_prj/'
+
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
     usage
@@ -33,13 +35,13 @@ baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
 module load cnvkit/0.9.0
-cnvkit.py coverage ${sbam} /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.cnvkit_targets.bed -o ${pair_id}.targetcoverage.cnn
-cnvkit.py coverage ${sbam} /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.cnvkit_antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
+cnvkit.py coverage ${sbam} ${index_path}/UTSWV2.cnvkit_targets.bed -o ${pair_id}.targetcoverage.cnn
+cnvkit.py coverage ${sbam} ${index_path}/UTSWV2.cnvkit_antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 if [[ $umi == 'umi' ]]
 then
-cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.uminormals.cnn -o ${pair_id}.cnr
+cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${index_path}/UTSWV2.uminormals.cnn -o ${pair_id}.cnr
 else
-cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn /project/shared/bicf_workflow_ref/GRCh38/UTSWV2.normals.cnn -o ${pair_id}.cnr
+cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${index_path}/UTSWV2.normals.cnn -o ${pair_id}.cnr
 fi   
 
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
