@@ -34,7 +34,7 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
 fi
 
 source /etc/profile.d/modules.sh
-module load  samtools/gcc/1.6 picard/2.10.3
+module load  samtools/1.6 picard/2.10.3
 baseDir="`dirname \"$0\"`"
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
@@ -62,13 +62,14 @@ else
     else
 	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --add-chrname --no-unal --dta -x ${index_path}/hisat_index/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
-    samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
+    if [[ $umi==1 ]]
+    then
+	python ${baseDir}/add_umi_sam.py -s out.sam -o output.bam
+    else
+	samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
+    fi
 fi
-if [[ $umi==1 ]]
-then
-    python ${baseDir}/add_umi_bam.py -b output.bam -o output.unsort2.bam
-    mv output.unsort2.bam output.bam
-fi
+
 samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -n -o  output.nsort.bam output.bam
 java -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.nsort.bam O=${pair_id}.bam
 samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
