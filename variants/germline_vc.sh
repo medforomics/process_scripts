@@ -62,7 +62,7 @@ module load python/2.7.x-anaconda picard/2.10.3 samtools/1.6 bedtools/2.26.0 snp
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]
     then
-	samtools index --threads $SLURM_CPUS_ON_NODE $i
+	samtools index -@ $SLURM_CPUS_ON_NODE $i
     fi
 done
 

@@ -34,7 +34,7 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 source /etc/profile.d/modules.sh
-module load subread/1.5.0-intel stringtie/1.1.2-intel
+module load subread/1.6.1 stringtie/1.3.2d-intel
 featureCounts -s $stranded -T $SLURM_CPUS_ON_NODE -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
 
 mkdir ${pair_id}_stringtie
