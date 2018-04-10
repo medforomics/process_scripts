@@ -32,13 +32,13 @@ r2base="${fq2%.fastq*}"
 source /etc/profile.d/modules.sh
 module load trimgalore/0.4.1 cutadapt/1.9.1
 
-if [ $fq1 == $fq2 ]
+if [ -s $fq2 ]
 then
-    trim_galore -q 25 --illumina --gzip --length 35 ${fq1}
-    mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
-    cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
-else
     trim_galore --paired -q 25 --illumina --gzip --length 35 ${fq1} ${fq2}
     mv ${r1base}_val_1.fq.gz ${pair_id}.trim.R1.fastq.gz
     mv ${r2base}_val_2.fq.gz ${pair_id}.trim.R2.fastq.gz
+else
+    trim_galore -q 25 --illumina --gzip --length 35 ${fq1}
+    mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
+    cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
 fi
