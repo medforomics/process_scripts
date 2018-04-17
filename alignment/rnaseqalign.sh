@@ -45,7 +45,7 @@ diff $fq1 $fq2 > difffile.out
 
 if [ $algo == 'star' ]
 then
-    if (-s difffile)
+    if [ -s difffile ]
     then
 	module load star/2.4.2a
 	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 $fq2 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
@@ -54,7 +54,7 @@ then
 	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
     fi
     mv outLog.final.out ${pair_id}.alignerout.txt
-    mv outAligned.sortedByCoord.out.bam output.bam
+    mv outAligned.sortedByCoord.out.bam ${pair_id}.bam
 else
     module load hisat2/2.1.0-intel
     if [ -s difffile ]
@@ -69,8 +69,8 @@ else
     else
 	samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
     fi
+    samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -n -o output.nsort.bam output.bam
+    java -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.nsort.bam O=${pair_id}.bam
 fi
 
-samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -n -o  output.nsort.bam output.bam
-java -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.nsort.bam O=${pair_id}.bam
 samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
