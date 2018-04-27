@@ -60,4 +60,4 @@ fi
 which samtools
 samtools sort -n --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
 java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
-samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
+samtools index ${pair_id}.bam
