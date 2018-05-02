@@ -41,7 +41,7 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 
-diff $fq1 $fq2 > difffile.out
+diff $fq1 $fq2 > difffile
 
 if [ $algo == 'star' ]
 then

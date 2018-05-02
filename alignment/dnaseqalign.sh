@@ -41,19 +41,21 @@ module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 picard/2.10.3
 
 baseDir="`dirname \"$0\"`"
 
-if [[ $fq1 == $fq2 ]]
+diff $fq1 $fq2 > difffile
+
+if [ -s difffile ]
 then
-    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} > out.sam
-else
     bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
+else
+    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} > out.sam
 fi
 
 if [[ $umi == 'umi' ]]
 then
-    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p ${pair_id}.hla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
+    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
 elif [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
-    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p ${pair_id}.hla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
+    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
 else 
     samtools view -1 -o output.unsort.bam out.sam
 fi
