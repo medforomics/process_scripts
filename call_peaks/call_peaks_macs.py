@@ -7,11 +7,8 @@ import argparse
 import shutil
 import logging
 from multiprocessing import cpu_count
-import sys
-sys.path.append(os.path.abspath('../python_utils'))
-import utils
-sys.path.append(os.path.abspath('../cross_correlation'))
-from xcor import xcor as calculate_xcor
+from python_utils import utils
+from quality_metrics.xcor import xcor as calculate_xcor
 
 EPILOG = '''
 For more details:

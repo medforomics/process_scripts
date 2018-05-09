@@ -8,8 +8,7 @@ import logging
 import shutil
 import pandas as pd
 import sys
-sys.path.append(os.path.abspath('../python_utils'))
-import utils
+from python_utils import utils
 
 EPILOG = '''
 For more details:

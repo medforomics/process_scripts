@@ -8,8 +8,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-sys.path.append(os.path.abspath('../python_utils'))
-import utils
+from python_utils import utils
 
 EPILOG = '''
 For more details:

@@ -9,9 +9,7 @@ import subprocess
 import shlex
 import logging
 from multiprocessing import cpu_count
-import sys
-sys.path.append(os.path.abspath('../python_utils'))
-import utils
+from python_utils import utils
 
 EPILOG = '''
 For more details:
