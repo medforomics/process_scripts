@@ -47,6 +47,7 @@ foreach $vcf (@vcffiles) {
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my %newgts;
+    my %afinfo;
     my $missingGT = 0;
   FG:foreach my $i (0..$#gts) {
       my $allele_info = $gts[$i];
@@ -94,17 +95,30 @@ foreach $vcf (@vcffiles) {
 	  $gtdata{DP} += $_;
 	}
       }
-      if ($gtdata{DP} && $gtdata{DP} < 3) {
+      my $mafs = '.';
+      my @maf = ();
+      if ($gtdata{DP} && $gtdata{DP} ne '.' && $gtdata{AO} && $gtdata{AO} ne '.') {
+	foreach $areadct (split(/,/,$gtdata{AO})) {
+	  push @maf, sprintf("%.2f",$areadct/$gtdata{DP});
+	}
+	$mafs = join(",",@maf);
+      }
+      if (exists $gtdata{DP} && $gtdata{DP} < 20) {
+	$missingGT ++;
+      }elsif (exists $gtdata{AO} && $gtdata{AO} < 3) {
 	$missingGT ++;
       }
+      $afinfo{$sid} = join(":",$gtdata{DP},$mafs);
       $newgts{$sid} =  join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
     }
     next if ($missingGT == scalar(@gts));
+    my @gtdesc;
     my @newgts;
     foreach $id (@sampleorder) {
+      push @gtdesc, join(":",$id,$afinfo{$id});
       push @newgts, $newgts{$id};
     }
-    $lines{$chrom}{$pos}{$caller} = join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
+    $lines{$chrom}{$pos}{$caller} = [$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,\@newgts,\@gtdesc];
   }
   close VCF;
 }
@@ -114,12 +128,34 @@ if (grep(/mutect/,@vcffiles)) {
 }
 F1:foreach $chr (sort {$a cmp $b} keys %lines) {
  F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
-    my $callset = join(",",keys %{$lines{$chr}{$pos}});
+    my @callset;
+    my %csets;
+  F3:foreach $caller (sort {$a cmp $b} keys %{$lines{$chr}{$pos}}) {
+      my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,
+	  $format,$gtsref,$gtdescref) = @{$lines{$chr}{$pos}{$caller}};
+      @gtdesc = @{$gtdescref};
+      foreach $gtd (@gtdesc) {
+	my ($id,$dp,$maf) = split(/:/,$gtd);
+	push @{$csets{$id}}, [$caller,$dp,$maf];
+      }
+      push @callset, join("/",$caller,$alt,@gtdesc);
+    }
+    my $consistent = 1;
+    foreach $id (keys %csets) {
+      my @calls = @{$csets{$id}};
+      my @calls = sort {$a[2] <=> $b[2]} @calls;
+      $consistent = 0 if ($calls[0][2] < 0.25 && $calls[-1][2] - $calls[0][2] > 0.10 && $calls[-1][2]/($calls[0][2]+0.001) > 3);
+    }
   F3:foreach $caller (@callers) {
       if ($lines{$chr}{$pos}{$caller}) {
 	my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,
-	    $format,@gts) = split(/\t/,$lines{$chr}{$pos}{$caller});
-	$annot = $annot.";CallSet=".$callset;
+	    $format,$gtsref,$gtdescref) = @{$lines{$chr}{$pos}{$caller}};
+	@gts = @{$gtsref};
+	@gtdesc = @{$gtdescref};
+	$annot = $annot.";CallSet=".join("|",@callset);
+	unless ($consistent) {
+	  $annot = $annot.";CallSetInconsistent=1";
+	}
 	print OUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,
 		       $filter,$annot,$format,@gts),"\n";
 	last F3;

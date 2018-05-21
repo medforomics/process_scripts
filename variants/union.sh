@@ -22,7 +22,7 @@ shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
-module load bedtools/2.26.0 samtools/1.6
+module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q
 
 HS=*.hotspot.vcf.gz
 list1=`ls *vcf.gz|grep -v hotspot`
@@ -32,11 +32,13 @@ calllist=''
 for i in *.vcf.gz; do
     if [[ $i == $HS ]]
     then
-	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a $i -b stdin |bgzip > nooverlap.hotspot.vcf.gz
+	bcftools norm -m - -O z -o hotspot.norm.vcf.gz $i
+	java -jar /cm/shared/apps/snpeff/4.3q/SnpSift.jar filter "(GEN[*].AD[1] > 3)" hotspot.norm.vcf.gz |bgzip > hotspot.lowfilt.vcf.gz
+	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a hotspot.lowfilt.vcf.gz -b stdin |bgzip > nooverlap.hotspot.vcf.gz
 	list2="$list2 nooverlap.hotspot.vcf.gz"
     fi
 done 
-#echo "$baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2"
+
 perl $baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2
 perl $baseDir/vcfsorter.pl ${index_path}/genome.dict int.vcf |bgzip > ${pair_id}.union.vcf.gz
 
