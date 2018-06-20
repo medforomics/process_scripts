@@ -5,15 +5,19 @@ usage() {
   echo "-h  --Help documentation for markdups.sh"
   echo "-b  --BAM file"
   echo "-p  --Prefix for output file name"
+  echo "-n  --Panel of Normal cnn file"
+  echo "-t  --Target and Antitarget prefix"
   echo "Example: bash cnvkit.sh -p prefix -b file.bam"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:uh opt
+while getopts :b:p:n:t:uh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
         p) pair_id=$OPTARG;;
+	n) normals=$OPTARG;;
+	t) targets=$OPTARG;;
 	u) umi='umi';;
         h) usage;;
     esac
@@ -33,17 +37,28 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
-source /etc/profile.d/modules.sh
-module load cnvkit/0.9.0
-cnvkit.py coverage ${sbam} ${index_path}/UTSWV2.cnvkit_targets.bed -o ${pair_id}.targetcoverage.cnn
-cnvkit.py coverage ${sbam} ${index_path}/UTSWV2.cnvkit_antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
+if [[ -z $normals ]]
+then
 if [[ $umi == 'umi' ]]
 then
-cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${index_path}/UTSWV2.uminormals.cnn -o ${pair_id}.cnr
+normals="${index_path}/UTSWV2.uminormals.cnn"
 else
-cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${index_path}/UTSWV2.normals.cnn -o ${pair_id}.cnr
-fi   
+normals="${index_path}/UTSWV2.normals.cnn"
+fi
+fi
 
+if [[ -z $targets ]]
+then
+targets="${index_path}/UTSWV2.cnvkit_"
+fi
+echo "${targets}targets.bed"
+echo "${targets}antitargets.bed"
+
+source /etc/profile.d/modules.sh
+module load cnvkit/0.9.0
+cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
+cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
+cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
 cnvkit.py call ${pair_id}.cns -o ${pair_id}.call.cns
 cnvkit.py diagram ${pair_id}.cnr -s ${pair_id}.cns -o ${pair_id}.cnv.pdf
