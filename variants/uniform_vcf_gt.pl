@@ -9,6 +9,12 @@ open VCF, "gunzip -c $vcf|" or die $!;
 while (my $line = <VCF>) {
     chomp($line);
     if ($line =~ m/#/) {
+	if ($line =~ m/#CHROM/) {
+	    print OUT "##FORMAT=<ID=AO,Number=A,Type=Integer,Description=\"Alternate allele observation count\">\n";
+	    print OUT "##FORMAT=<ID=RO,Number=1,Type=Integer,Description=\"Reference allele observation count\">\n";
+	    print OUT "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n";
+	    print OUT "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Approximate read depth (reads with MQ=255 or with bad mates are filtered)\">\n";
+	}
 	print OUT $line,"\n";
 	next;
     }
@@ -34,11 +40,6 @@ while (my $line = <VCF>) {
       foreach my $i (0..$#deschead) {
 	  $gtdata{$deschead[$i]} = $gtinfo[$i];
       }
-      if ($gtdata{DP} == 0 || $gtdata{GT} eq './.') {
-	  push @newgts, '.:.:.:.:.';
-	  $missingGT ++;
-	  next FG;
-      }
       if ($gtdata{AD}){
 	  ($gtdata{RO},@alts) = split(/,/,$gtdata{AD});
 	  $gtdata{AO} = join(",",@alts);
@@ -59,6 +60,11 @@ while (my $line = <VCF>) {
       }
       if ($gtdata{DP} && $gtdata{DP} < 5) {
 	  $missingGT ++;
+      }
+      if ($gtdata{DP} == 0 || $gtdata{GT} eq './.') {
+	  push @newgts, '.:.:.:.:.';
+	  $missingGT ++;
+	  next FG;
       }
       push @newgts, join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
   }
