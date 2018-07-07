@@ -30,9 +30,11 @@ my $file = shift @ARGV;
 my $prefix = (split(/\./,(split(/\//,$file))[0]))[0];
 
 open OUT, ">$prefix\.cnvcalls.txt" or die $!;
-open BIO, ">$prefix\.data_cna_cbioportal.txt" or die $!;
+open BIO, ">$prefix\.data_cna_discrete.cbioportal.txt" or die $!;
+open BIO2, ">$prefix\.data_cna_continuous.cbioportal.txt" or die $!;
 print OUT join("\t","Gene","Chromosome","Start","End","Abberation Type","CN","Score"),"\n";
 print BIO join("\t","Hugo_Symbol","Entrez_Gene_Id",$prefix),"\n";
+print BIO2 join("\t","Hugo_Symbol","Entrez_Gene_Id",$prefix),"\n";
 
 open IN, "<$file" or die $!;
 my $header = <IN>;
@@ -56,9 +58,11 @@ while (my $line = <IN>) {
 	$cn_cbio = $cn -2;
 	$cn_cbio = 2 if ($cn > 4);
 	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
+        print BIO2 join("\t",$gene,$entrez{$gene},$log2),"\n";
 	print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
     }
 }
 close IN;
 close OUT;
 close BIO;
+close BIO2;

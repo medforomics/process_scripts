@@ -5,7 +5,6 @@ use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 
 my %opt = ();
 my $results = GetOptions (\%opt,'fusion|f=s','prefix|p=s','help|h');
-
 my %entrez;
 open ENT, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
 my $headline = <ENT>;
@@ -36,7 +35,7 @@ print OUT join("\t","FusionName","LeftGene","RightGene","LefttBreakpoint",
 print OUTIR join("\t","Hugo_Symbol","Entrez_Gene_Id","Center","Tumor_Sample_Barcode",
                "Fusion","DNA_support","RNA_support","Method","Frame"),"\n";
 
-my $sname = (split(/_DNA_panel1385/,$opt{prefix}))[0];
+my $sname = $opt{prefix};
 
 open FUSION, "<$opt{fusion}" or die $!;
 my $header = <FUSION>;
@@ -62,15 +61,16 @@ while (my $line = <FUSION>) {
   $hash{SumRNAReads} += $hash{JunctionReadCount}+$hash{SpanningFragCount};
   my $fname = join("--",$hash{LeftGene},$hash{RightGene});
   my $fname2 = join("--",sort {$a cmp $b} $hash{LeftGene},$hash{RightGene});
-  my $ename = join("--",$entrez{$hash{LeftGene}},$entrez{$hash{RightGene}});
-  my ($dna_support,$rna_support)=("no","no");
+  my ($dna_support,$rna_support)=("no") x 2;
   if ($known{$fname2} && ($hash{SumRNAReads} >= 3)|| ($hash{SumRNAReads} >= 5)) {
     $rna_support = "yes";
     print OUT join("\t",$fname,$hash{LeftGene},$hash{RightGene},
 		   $hash{LeftBreakpoint},$hash{RightBreakpoint},$hash{LeftStrand},
 		   $hash{RightStrand},$hash{SumRNAReads},0),"\n";
-    print OUTIR join("\t",$fname,$ename,"UTSW NGS Clinical Sequencing Lab",$sname,$fname." fusion",
-		     0,$rna_support,"STAR 2.5.2b","N/A"),"\n";
+    print OUTIR join("\t",$hash{LeftGene},$entrez{$hash{LeftGene}},"UTSW",$sname,$fname." fusion",
+		     $dna_support,$rna_support,"STAR Fusion","N/A"),"\n";
+   print OUTIR join("\t",$hash{RightGene},$entrez{$hash{RightGene}},"UTSW",$sname,$fname." fusion",
+                     $dna_support,$rna_support,"STAR Fusion","N/A"),"\n";
   }
 }
 
