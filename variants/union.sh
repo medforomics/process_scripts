@@ -9,11 +9,12 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:h opt
+while getopts :r:d:p:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
+        d) dir=$OPTARG;;
         h) usage;;
     esac
 done
@@ -21,15 +22,22 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
+echo $pair_id $index_path $dir
+
+if [[ -z $dir ]]
+then
+dir='.'
+fi
+
 source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q
 
 HS=*.hotspot.vcf.gz
-list1=`ls *vcf.gz|grep -v hotspot`
-list2=`ls *vcf.gz|grep -v hotspot`
+list1=`ls ${dir}/*vcf.gz|grep -v hotspot`
+list2=`ls ${dir}/*vcf.gz|grep -v hotspot`
 varlist=''
 calllist=''
-for i in *.vcf.gz; do
+for i in ${dir}/*.vcf.gz; do
     if [[ $i == $HS ]]
     then
 	bcftools norm -m - -O z -o hotspot.norm.vcf.gz $i
