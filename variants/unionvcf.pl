@@ -138,7 +138,7 @@ F1:foreach $chr (sort {$a cmp $b} keys %lines) {
 	my ($id,$dp,$maf) = split(/:/,$gtd);
 	push @{$csets{$id}}, [$caller,$dp,$maf];
       }
-      push @callset, join("/",$caller,$alt,@gtdesc);
+      push @callset, join("|",$caller,$alt,@gtdesc);
     }
     my $consistent = 1;
     foreach $id (keys %csets) {
@@ -152,7 +152,7 @@ F1:foreach $chr (sort {$a cmp $b} keys %lines) {
 	    $format,$gtsref,$gtdescref) = @{$lines{$chr}{$pos}{$caller}};
 	@gts = @{$gtsref};
 	@gtdesc = @{$gtdescref};
-	$annot = $annot.";CallSet=".join("|",@callset);
+	$annot = $annot.";CallSet=".join(",",@callset);
 	unless ($consistent) {
 	  $annot = $annot.";CallSetInconsistent=1";
 	}

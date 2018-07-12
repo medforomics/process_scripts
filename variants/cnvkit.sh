@@ -61,5 +61,5 @@ cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcov
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
 cnvkit.py call ${pair_id}.cns -o ${pair_id}.call.cns
-cnvkit.py diagram ${pair_id}.cnr -s ${pair_id}.cns -o ${pair_id}.cnv.pdf
+cnvkit.py scatter ${pair_id}.cnr -s ${pair_id}.call.cns -o ${pair_id}.cnv.scatter.pdf
 perl $baseDir/filter_cnvkit.pl *.call.cns
