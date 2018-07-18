@@ -97,7 +97,7 @@ foreach $vcf (@vcffiles) {
       }
       my $mafs = '.';
       my @maf = ();
-      if ($gtdata{DP} && $gtdata{DP} ne '.' && $gtdata{AO} && $gtdata{AO} ne '.') {
+      if ($gtdata{DP} && $gtdata{DP} ne '.' && exists $gtdata{AO} && $gtdata{AO} ne '.') {
 	foreach $areadct (split(/,/,$gtdata{AO})) {
 	  push @maf, sprintf("%.2f",$areadct/$gtdata{DP});
 	}
