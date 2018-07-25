@@ -50,12 +50,14 @@ else
     bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} > out.sam
 fi
 
-if [[ $umi == 'umi' ]]
+if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
 elif [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
+elif [[ $umi == 'umi' ]] 
+    python ${baseDir}/add_umi_sam.py -s out.sam -o output.unsort.bam
 else 
     samtools view -1 -o output.unsort.bam out.sam
 fi
