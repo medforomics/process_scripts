@@ -53,6 +53,6 @@ if [[ $nuctype == 'dna' ]]; then
     samtools view -b -q 1 ${sbam} | bedtools coverage -sorted -hist -g ${index_path}/genomefile.txt -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
     bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a ${bed} -b ${sbam} -hist > ${pair_id}.covhist.txt
     grep ^all ${pair_id}.covhist.txt >  ${pair_id}.genomecov.txt
-    samtools view ${pair_id}.dedup.bam | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
+    samtools view ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt
  fi

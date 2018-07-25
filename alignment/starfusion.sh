@@ -37,7 +37,12 @@ module add python/2.7.x-anaconda star/2.5.2b
 STAR-Fusion --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --output_dir star_fusion &> star_fusion.err
 mv star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
 
+
 if [[ $filter==1 ]]
 then
+cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
+bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
+#cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint|perl -pe 's/:/\t/g' |awk '{print $1"\t"$2"\t"$4"\t"$5"\tAVG"}' > coords.txt
+#java -Xmx1G -jar /project/shared/bicf_workflow_ref/seqprg/oncofuse-1.1.1/Oncofuse.jar -a hg38 coords.txt coord AVG oncofuse.out
 perl $baseDir/filter_genefusions.pl -p ${pair_id} -f ${pair_id}.starfusion.txt
 fi
