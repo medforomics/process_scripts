@@ -56,9 +56,10 @@ then
 elif [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
-elif [[ $umi == 'umi' ]] 
+elif [[ $umi == 'umi' ]]
+then
     python ${baseDir}/add_umi_sam.py -s out.sam -o output.unsort.bam
-else 
+else
     samtools view -1 -o output.unsort.bam out.sam
 fi
 which samtools

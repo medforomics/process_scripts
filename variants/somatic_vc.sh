@@ -135,9 +135,10 @@ fi
 
 if [ $algo == 'shimmer' ]
 then
-    module load snpeff/4.3q shimmer/0.1.1 samtools/1.6  vcftools/0.1.14
+    module load shimmer/0.1.1 samtools/1.6  vcftools/0.1.14
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
     perl $baseDir/add_readct_shimmer.pl
+    module load snpeff/4.3q
     vcf-annotate -n --fill-type shimmer/somatic_diffs.readct.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter '(GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.shimmer.vcf.gz
 fi
 
