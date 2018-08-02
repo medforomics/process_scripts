@@ -99,6 +99,7 @@ if [ $algo == 'virmid' ]
     virmid -R ${reffa} -D ${tumor} -N ${normal} -s ${cosmic} -t $SLURM_CPUS_ON_NODE -M 2000 -c1 10 -c2 10
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.som.passed.vcf
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.loh.passed.vcf
+    module rm java/oracle/jdk1.7.0_51
     module load snpeff/4.3q
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
 fi
@@ -129,6 +130,7 @@ then
   sambamba mpileup --tmpdir=./ -t $SLURM_CPUS_ON_NODE ${normal} --samtools "-C 50 -f ${reffa}"  > n.mpileup
   VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
   VarScan copynumber n.mpileup t.mpileup vscancnv
+  module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
   vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
 fi
@@ -138,6 +140,7 @@ then
     module load shimmer/0.1.1 samtools/1.6  vcftools/0.1.14
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
     perl $baseDir/add_readct_shimmer.pl
+    module rm java/oracle/jdk1.7.0_51
     module load snpeff/4.3q
     vcf-annotate -n --fill-type shimmer/somatic_diffs.readct.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter '(GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.shimmer.vcf.gz
 fi

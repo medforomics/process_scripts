@@ -56,6 +56,7 @@ echo "${targets}antitargets.bed"
 
 source /etc/profile.d/modules.sh
 module load cnvkit/0.9.0 bedtools/2.26.0
+unset DISPLAY
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
