@@ -33,7 +33,7 @@ fi
 index_path=${refgeno}/CTAT_lib/
 baseDir="`dirname \"$0\"`"
 source /etc/profile.d/modules.sh
-module add python/2.7.x-anaconda star/2.5.2b
+module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
 STAR-Fusion --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --output_dir star_fusion &> star_fusion.err
 mv star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
 
