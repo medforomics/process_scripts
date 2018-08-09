@@ -46,7 +46,6 @@ if [[ $nuctype == 'dna' ]]; then
     module load bedtools/2.26.0 picard/2.10.3
     samtools view -@ $SLURM_CPUS_ON_NODE -b -L ${bed} -o ${pair_id}.ontarget.bam ${sbam}
     samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.ontarget.bam
-    #samtools flagstat ${pair_id}.ontarget.bam > ${pair_id}.ontarget.flagstat.txt
     java -Xmx64g -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt
     java -Xmx64g -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt
     java -Xmx64g -jar $PICARD/picard.jar EstimateLibraryComplexity I=${sbam} OUTPUT=${pair_id}.libcomplex.txt
@@ -55,4 +54,4 @@ if [[ $nuctype == 'dna' ]]; then
     grep ^all ${pair_id}.covhist.txt >  ${pair_id}.genomecov.txt
     samtools view  -@ $SLURM_CPUS_ON_NODE ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt
- fi
+fi

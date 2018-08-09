@@ -18,6 +18,7 @@ def get_args():
     return args
 
 # set the tag names - take a look at SAM spec to pick an appropriate one
+
 args = get_args()
 infile = pysam.AlignmentFile(args.sam, "r")
 out = pysam.AlignmentFile(args.out, "wb", template=infile)
@@ -25,5 +26,6 @@ for read in infile.fetch():
       read.set_tag('RX', read.qname.split(":")[-1])
       out.write(read)
 
+    
 infile.close()
 out.close()
