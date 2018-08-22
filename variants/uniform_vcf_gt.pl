@@ -1,9 +1,9 @@
 #!/usr/bin/perl 
 #migrate_db.pl
 
+my $pair_id = shift @ARGV;
 my $vcf = shift @ARGV;
-my $outfile = $vcf;
-$outfile =~ s/vcf.gz/uniform.vcf/;
+my $outfile = $pair_id.".uniform.vcf";
 open OUT, ">$outfile" or die $!;
 open VCF, "gunzip -c $vcf|" or die $!;
 while (my $line = <VCF>) {
@@ -15,7 +15,9 @@ while (my $line = <VCF>) {
 	    print OUT "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n";
 	    print OUT "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Approximate read depth (reads with MQ=255 or with bad mates are filtered)\">\n";
 	}
-	print OUT $line,"\n";
+	unless ($line =~ m/FORMAT=<ID=AO/ || $line =~ m/FORMAT=<ID=AD/ || $line =~ m/FORMAT=<ID=RO/ || $line =~ m/FORMAT=<ID=DP/) {
+	    print OUT $line,"\n";
+	}
 	next;
     }
     my ($chrom, $pos,$id,$ref,$alt,$score,

@@ -33,6 +33,10 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
+if [[ $SLURM_CPUS_ON_NODE > 64 ]]
+then
+    SLURM_CPUS_ON_NODE=64
+fi
 source /etc/profile.d/modules.sh
 module load subread/1.6.1 stringtie/1.3.2d-intel
 featureCounts -s $stranded -T $SLURM_CPUS_ON_NODE -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}

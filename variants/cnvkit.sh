@@ -39,7 +39,10 @@ baseDir="`dirname \"$0\"`"
 
 if [[ -z $normals ]]
 then
-if [[ $umi == 'umi' ]]
+if [[ $targets == 'panel1385V2-2.cnvkit_' ]]
+then
+normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
+elif [[ $umi == 'umi' ]]
 then
 normals="${index_path}/UTSWV2.uminormals.cnn"
 else

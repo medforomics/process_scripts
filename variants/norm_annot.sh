@@ -26,9 +26,8 @@ baseDir="`dirname \"$0\"`"
 source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
 
-prefix="${vcf%.vcf.gz}"
-perl $baseDir\/uniform_vcf_gt.pl $vcf
-bgzip -f ${prefix}.uniform.vcf
-j=${prefix}.uniform.vcf.gz
+perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
+bgzip -f ${pair_id}.uniform.vcf
+j=${pair_id}.uniform.vcf.gz
 tabix -f $j
-bcftools norm -m - -O z -o ${prefix}.norm.vcf.gz $j
+bcftools norm -m - -O z -o ${pair_id}.norm.vcf.gz $j
