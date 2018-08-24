@@ -11,13 +11,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:t:uh opt
+while getopts :b:p:n:t:c:uh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
         p) pair_id=$OPTARG;;
 	n) normals=$OPTARG;;
 	t) targets=$OPTARG;;
+	c) capture=$OPTARG;;
 	u) umi='umi';;
         h) usage;;
     esac
@@ -37,23 +38,20 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
-if [[ -z $normals ]]
+if [[ $capture == '/project/shared/bicf_workflow_ref/GRCh38/clinseq_prj/UTSWV2.bed' ]]
+then 
+    normals="${index_path}/UTSWV2.normals.cnn"
+    targets="${index_path}/UTSWV2.cnvkit_"
+    if [[ $umi == 'umi' ]]
+    then
+	normals="${index_path}/UTSWV2.uminormals.cnn"
+    fi
+elif [[ $capture == '/project/shared/bicf_workflow_ref/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
 then
-if [[ $targets == 'panel1385V2-2.cnvkit_' ]]
-then
-normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
-elif [[ $umi == 'umi' ]]
-then
-normals="${index_path}/UTSWV2.uminormals.cnn"
-else
-normals="${index_path}/UTSWV2.normals.cnn"
-fi
+    normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
+    target='panel1385V2-2.cnvkit_'
 fi
 
-if [[ -z $targets ]]
-then
-targets="${index_path}/UTSWV2.cnvkit_"
-fi
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
 

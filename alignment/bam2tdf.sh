@@ -31,6 +31,5 @@ baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
 module load igvtools/2.3.71 samtools/1.6
+samtools index  -@ $SLURM_CPUS_ON_NODE $bam
 igvtools count -z 5 $bam ${pair_id}.tdf ${index_path}/igv/human.genome
-
-

@@ -93,7 +93,7 @@ then
 	java -jar $PICARD/picard.jar SortVcf I=gatk.g.vcf O=${i}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
 	gvcflist="$gvcflist --variant ${i}.gatk.g.vcf"
     done
-    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs -o gatk.vcf $gvcflist
+    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs --disable_auto_index_creation_and_locking_when_reading_rods -o gatk.vcf $gvcflist
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
