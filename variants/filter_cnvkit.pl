@@ -2,7 +2,7 @@
 #parse_cnvkit_table.pl
 
 my $refdir = '/project/shared/bicf_workflow_ref/GRCh38/';
-open OM, "<$refdir\/clinseq_prj/panel1385.genelist.txt" or die $!;
+open OM, "<$refdir\/clinseq_prj/panel1410.genelist.txt" or die $!;
 while (my $line = <OM>) {
   chomp($line);
   $keep{$line} = 1;
@@ -27,25 +27,50 @@ while (my $line = <ENT_SYM>){
 close ENT_SYM;
 
 my $file = shift @ARGV;
-my $prefix = (split(/\./,(split(/\//,$file))[0]))[0];
+my $sname = (split(/\./,(split(/\//,$file))[-1]))[0];
+my $prefix = (split(/\./,$file))[0];
 my %cyto;
 open CYTO, "<$prefix\.cytoband.bed" or die $!;
 while (my $line = <CYTO>) {
     chomp($line);
     my ($chrom,$start,$end,$band) = split(/\t/,$line);
     my $key = $chrom.":".$start."-".$end;
-    push @{$cyto{$key}}, $band;
+    $band =~ m/^(\w)(.+)/;
+    push @{$cyto{$key}}, [$1,$2];
 }
 
 open OUT, ">$prefix\.cnvcalls.txt" or die $!;
 open OUT2, ">$prefix\.cnv.answer.txt" or die $!;
-
+open OUT3, ">$prefix\.answerplot.cns" or die $!;
 open BIO, ">$prefix\.data_cna_discrete.cbioportal.txt" or die $!;
 open BIO2, ">$prefix\.data_cna_continuous.cbioportal.txt" or die $!;
+
 print OUT join("\t","Gene","Chromosome","Start","End","Abberation Type","CN","Score"),"\n";
+print OUT3 join("\t","Chromosome","Start","End","Log2","CN"),"\n";
 print OUT2 join("\t","Gene","Chromosome","Start","End","Abberation Type","CN","Score","CytoBand"),"\n";
-print BIO join("\t","Hugo_Symbol","Entrez_Gene_Id",$prefix),"\n";
-print BIO2 join("\t","Hugo_Symbol","Entrez_Gene_Id",$prefix),"\n";
+print BIO join("\t","Hugo_Symbol","Entrez_Gene_Id",$sname),"\n";
+print BIO2 join("\t","Hugo_Symbol","Entrez_Gene_Id",$sname),"\n";
+
+open CNR, "<$prefix\.cnr" or die $!;
+open CNRO, ">$prefix\.answerplot.cnr" or die $!;
+print CNRO join("\t","Gene","Chromosome","Start","End","Log2","Depth","Weight"),"\n";
+my $header = <CNR>;
+while (my $line = <CNR>) {
+    chomp($line);
+    my ($chr,$start,$end,$geneids,$log2,$depth,$weight) = split(/\t/,$line);
+    my $key = $chr.":".$start."-".$end;
+    my %genes;
+    my @ids = split(/;|,/,$geneids);
+    foreach my $gid (@ids) {
+	my ($key,$value) = split(/=/,$gid);
+	if ($key eq 'ensembl_gn' || $key eq 'identifier') {
+	    $genes{$value} = 1 if $keep{$value};
+	}
+    }
+    foreach $gene (keys %genes) {
+	print CNRO join("\t",$gene,$chr,$start,$end,$log2,$depth,$weight),"\n"; 
+    }
+}
 
 open IN, "<$file" or die $!;
 my $header = <IN>;
@@ -64,6 +89,7 @@ while (my $line = <IN>) {
 	}
     }
     my $len = sprintf("%.1f",($end-$start)/1000);
+    print OUT3 join("\t",$chr,$start,$end,$log2,$cn),"\n";
     next if ($cn == 2) || scalar(keys %genes) < 1;
     my $abtype = 'amplification';
     $abtype = 'loss' if ($cn < 2);
@@ -73,7 +99,8 @@ while (my $line = <IN>) {
 	$cn_cbio = 2 if ($cn > 4);
 	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
         print BIO2 join("\t",$gene,$entrez{$gene},$log2),"\n";
-	print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,join(",",@{$cyto{$key}})),"\n";
+	my @cytoband = sort {$a->[1] <=>$b->[1]} @{$cyto{$key}};
+	print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,join("",@{$cytoband[0]},'-',@{$cytoband[-1]})),"\n";
 	print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
     }
 }
