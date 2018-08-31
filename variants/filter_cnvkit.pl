@@ -100,7 +100,12 @@ while (my $line = <IN>) {
 	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
         print BIO2 join("\t",$gene,$entrez{$gene},$log2),"\n";
 	my @cytoband = sort {$a->[1] <=>$b->[1]} @{$cyto{$key}};
-	print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,join("",@{$cytoband[0]},'-',@{$cytoband[-1]})),"\n";
+	if (join("",@{$cytoband[0]}) eq join("",@{$cytoband[-1]})) {
+	    $cband = join("",@{$cytoband[0]});
+	}else {
+	    $cband = join("",@{$cytoband[0]},'-',@{$cytoband[-1]});
+	}
+	print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,$cband),"\n";
 	print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
     }
 }
