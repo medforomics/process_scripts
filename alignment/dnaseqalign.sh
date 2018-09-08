@@ -12,13 +12,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:x:y:p:uh opt
+while getopts :r:x:y:g:p:uh opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         x) fq1=$OPTARG;;
         y) fq2=$OPTARG;;
 	u) umi='umi';;
+	g) read_group=$OPTARG;;
         p) pair_id=$OPTARG;;
         h) usage;;
     esac
@@ -36,6 +37,11 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 
+if [[ -z $read_group ]]
+then
+    read_group=$pair_id
+fi
+
 source /etc/profile.d/modules.sh
 module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 picard/2.10.3
 
@@ -45,9 +51,9 @@ diff $fq1 $fq2 > difffile
 
 if [ -s difffile ]
 then
-    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
+    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
 else
-    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${fq1} > out.sam
+    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
 fi
 
 if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
