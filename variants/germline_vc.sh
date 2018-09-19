@@ -84,7 +84,7 @@ then
     vcf-annotate -n --fill-type ssvar.vcf.gz| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.ssvar.vcf.gz -
 elif [[ $algo == 'gatk' ]]
 then
-    module load gatk/3.7
+    module load gatk/3.8
     gvcflist=''
     for i in *.bam; do
 	cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.{}.chr.gatk.g.vcf -nct 2 -L {}"
