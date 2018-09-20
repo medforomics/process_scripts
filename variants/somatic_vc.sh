@@ -113,7 +113,7 @@ fi
 
 if [ $algo == 'mutect2' ]
 then
-  module load parallel gatk/3.7 snpeff/4.3q samtools/1.6 vcftools/0.1.14
+  module load parallel gatk/3.8 snpeff/4.3q samtools/1.6 vcftools/0.1.14
   if [ -z ${tbed} ]
   then
       cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar \$GATK_JAR -R ${reffa} -D ${dbsnp} -T MuTect2 -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor} -I:normal ${normal} --cosmic ${cosmic} -o ${tid}.{}.mutect.vcf -L {}"
@@ -125,13 +125,13 @@ fi
 
 if [ $algo == 'varscan' ]
 then
-  module load samtools/1.6 VarScan/2.4.2 speedseq/20160506 vcftools/0.1.14
-  sambamba mpileup --tmpdir=./ -t $SLURM_CPUS_ON_NODE ${tumor} --samtools "-C 50 -f ${reffa}"  > t.mpileup
-  sambamba mpileup --tmpdir=./ -t $SLURM_CPUS_ON_NODE ${normal} --samtools "-C 50 -f ${reffa}"  > n.mpileup
-  VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
-  VarScan copynumber n.mpileup t.mpileup vscancnv
+  module load samtools/1.6 VarScan/2.4.2 vcftools/0.1.14
   module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
+  samtools mpileup -C 50 -f ${reffa} $tumor > t.mpileup
+  samtools mpileup -C 50 -f ${reffa} $normal > t.mpileup
+  VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
+  VarScan copynumber n.mpileup t.mpileup vscancnv
   vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
 fi
 
