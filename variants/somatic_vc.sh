@@ -129,7 +129,7 @@ then
   module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
   samtools mpileup -C 50 -f ${reffa} $tumor > t.mpileup
-  samtools mpileup -C 50 -f ${reffa} $normal > t.mpileup
+  samtools mpileup -C 50 -f ${reffa} $normal > n.mpileup
   VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
   VarScan copynumber n.mpileup t.mpileup vscancnv
   vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
