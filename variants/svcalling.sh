@@ -11,14 +11,16 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:a:b:n:k:p:h opt
+while getopts :r:p:b:t:i:k:n:m:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         b) sbam=$OPTARG;;
-	k) keepid=$OPTARG;;
+        k) tid=$OPTARG;;
+	i) nid=$OPTARG;;
         n) normal=$OPTARG;;
+	m) method=$OPTARG;;
         h) usage;;
     esac
 done
@@ -50,92 +52,75 @@ source /etc/profile.d/modules.sh
 module load  speedseq/20160506 novoBreak/v1.1.3 delly2/v0.7.7-multi samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 mkdir temp
 
-#if [[ -n ${normal} ]]
-#then
-  #run_novoBreak.sh /cm/shared/apps/novoBreak/novoBreak_distribution_v1.1.3rc ${reffa} ${sbam} ${normal} $SLURM_CPUS_ON_NODE
-  #perl $baseDir/vcf2bed.sv.pl novoBreak.pass.flt.vcf |sort -T temp -V -k 1,1 -k 2,2n > novobreak.bed
-  #mv novoBreak.pass.flt.vcf ${pair_id}.novobreak.vcf
-  #bgzip ${pair_id}.novobreak.vcf
-#fi
-if [[ -n ${normal} ]]
-then
-  #RUN DELLY
-  delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-  delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-  delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-  delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-  delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-  delly2 filter -t BND -o  delly_tra.bcf -f somatic -s samples.tsv delly_translocations.bcf
-  delly2 filter -t DUP -o  delly_dup.bcf -f somatic -s samples.tsv delly_duplications.bcf
-  delly2 filter -t INV -o  delly_inv.bcf -f somatic -s samples.tsv delly_inversions.bcf
-  delly2 filter -t DEL -o  delly_del.bcf -f somatic -s samples.tsv delly_deletion.bcf
-  delly2 filter -t INS -o  delly_ins.bcf -f somatic -s samples.tsv delly_insertion.bcf
-else
-#RUN DELLY
-  delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
-  delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
-  delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam}
-  delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
-  delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
-  delly2 filter -t BND -o  delly_tra.bcf -f germline delly_translocations.bcf
-  delly2 filter -t DUP -o  delly_dup.bcf -f germline delly_duplications.bcf
-  delly2 filter -t INV -o  delly_inv.bcf -f germline delly_inversions.bcf
-  delly2 filter -t DEL -o  delly_del.bcf -f germline delly_deletion.bcf
-  delly2 filter -t INS -o  delly_ins.bcf -f germline delly_insertion.bcf
-fi
-#MERGE DELLY AND MAKE BED
+genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
 
-bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
-perl $baseDir/vcf2bed.sv.pl delly.vcf | sort -V -k 1,1 -k 2,2n > delly.bed
-bgzip delly.vcf
-if [[ -n ${normal} ]]
+if [[ $method == 'pindel' ]]
 then
-    tabix delly.vcf.gz
-    bcftools view -O z -o ${pair_id}.delly.vcf.gz -s ${keepid} delly.vcf.gz
-else
-    mv delly.vcf.gz ${pair_id}.delly.vcf.gz
+    module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q
+    echo -e "${sbam}\t400\t${tid}" > ${pair_id}.pindel.config
+    if [[ -n ${normal} ]]
+    then
+	echo -e "${normal}\t400\t${nid}" >> ${pair_id}.pindel.config
+    fi
+    pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+    pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.pindel.vcf.gz
 fi
-tabix ${pair_id}.delly.vcf.gz
 
-#MAKE FILES FOR LUMPY
-samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${sbam}
-samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
-gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o splitters.bam -
-gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o discordants.bam -
-#RUN LUMPY
-if [[ -n ${normal} ]]
+if [[ $method == 'delly' ]]
 then
-    samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${normal}
+    module load  delly2/v0.7.7-multi samtools/1.6 snpeff/4.3q
+    if [[ -n ${normal} ]]
+    then
+	#RUN DELLY
+	echo -e "${normal}\tcontrol"> samples.tsv
+	echo -e "${tumor}\ttumor" >> samples.tsv
+	delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 filter -t BND -o  delly_tra.bcf -f somatic -s samples.tsv delly_translocations.bcf
+	delly2 filter -t DUP -o  delly_dup.bcf -f somatic -s samples.tsv delly_duplications.bcf
+	delly2 filter -t INV -o  delly_inv.bcf -f somatic -s samples.tsv delly_inversions.bcf
+	delly2 filter -t DEL -o  delly_del.bcf -f somatic -s samples.tsv delly_deletion.bcf
+	delly2 filter -t INS -o  delly_ins.bcf -f somatic -s samples.tsv delly_insertion.bcf
+    else
+	#RUN DELLY
+	delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 filter -t BND -o  delly_tra.bcf -f germline delly_translocations.bcf
+	delly2 filter -t DUP -o  delly_dup.bcf -f germline delly_duplications.bcf
+	delly2 filter -t INV -o  delly_inv.bcf -f germline delly_inversions.bcf
+	delly2 filter -t DEL -o  delly_del.bcf -f germline delly_deletion.bcf
+	delly2 filter -t INS -o  delly_ins.bcf -f germline delly_insertion.bcf
+    fi
+    #MERGE DELLY AND MAKE BED
+    bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
+    bgzip delly.vcf
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.delly.vcf.gz
+fi
+
+if [[ $method == 'lumpy' ]]
+then
+    #MAKE FILES FOR LUMPY
+    samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${sbam}
     samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
-    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o normal.splitters.bam -
-    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o normal.discordants.bam -
-    speedseq sv -t $SLURM_CPUS_ON_NODE -o sssv -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
-    java -jar $SNPEFF_HOME/SnpSift.jar filter -n "GEN[0].SU > 1" sssv.sv.vcf.gz |bgzip > tumor.sssv.sv.vcf.gz
-    tabix tumor.sssv.sv.vcf.gz
-    bcftools view -O z -o ${pair_id}.sssv.sv.vcf.gz -s ${keepid} tumor.sssv.sv.vcf.gz
-else
-    speedseq sv -t $SLURM_CPUS_ON_NODE -o ${pair_id}.sssv -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
+    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o splitters.bam -
+    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o discordants.bam -
+    #RUN LUMPY
+    if [[ -n ${normal} ]]
+    then
+	samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${normal}
+	samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
+	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o normal.splitters.bam -
+	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o normal.discordants.bam -
+	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
+    else
+	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
+    fi
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
 fi
-
-java -jar $SNPEFF_HOME/SnpSift.jar filter "GEN[0].SU > 10" ${pair_id}.sssv.sv.vcf.gz > lumpy.vcf
-perl $baseDir/vcf2bed.sv.pl lumpy.vcf > lumpy.bed
-
-#COMPARE DELLY & LUMPY
-#if [[ -n ${normal} ]]
-#then
-  #bedtools multiinter -cluster -header -names novobreak delly lumpy -i novobreak.bed delly.bed lumpy.bed > sv.intersect.bed
-  #zcat ${pair_id}.novobreak.vcf.gz | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
-  #grep novobreak sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v start | bedtools intersect -header -b stdin -a ${pair_id}.novobreak.vcf.gz  | perl -p -e 's/SPIKEIN/${tid}/' |bgzip > svt1.vcf.gz
-#else
-#fi
-
-bedtools multiinter -cluster -header -names delly lumpy -i delly.bed lumpy.bed > sv.intersect.bed 
-grep delly sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v 'start' |grep -v 'novobreak' | bedtools intersect -header -b stdin -a ${pair_id}.delly.vcf.gz |bgzip > svt2.vcf.gz
-grep lumpy sv.intersect.bed |cut -f 1,2,3 |sort -V -k 1,1 -k 2,2n |grep -v 'start' |grep -v 'delly' |grep -v 'novobreak' | bedtools intersect -header -b stdin -a ${pair_id}.sssv.sv.vcf.gz |bgzip > svt3.vcf.gz
-
-vcf-concat svt*.vcf.gz | vcf-sort -t temp > ${pair_id}.sv.vcf
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf > ${pair_id}.sv.annot.vcf
-
-perl $baseDir/svannot.pl -i ${pair_id}.sv.annot.vcf
-bgzip ${pair_id}.sv.annot.vcf
-tabix ${pair_id}.sv.annot.vcf.gz
