@@ -79,7 +79,7 @@ then
     java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "(CNT[*] >0)" - |bgzip > ${pair_id}.hotspot.vcf.gz
 elif [[ $algo == 'speedseq' ]]
 then
-    module load speedseq/20160506
+    module load speedseq/gcc/0.1.2
     speedseq var -t $SLURM_CPUS_ON_NODE -o ssvar ${reffa} *.bam
     vcf-annotate -n --fill-type ssvar.vcf.gz| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.ssvar.vcf.gz -
 elif [[ $algo == 'gatk' ]]

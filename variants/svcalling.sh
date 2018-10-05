@@ -11,16 +11,15 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:t:i:k:n:m:h opt
+while getopts :r:p:b:i:e:n:a:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         b) sbam=$OPTARG;;
-        k) tid=$OPTARG;;
-	i) nid=$OPTARG;;
+        i) tid=$OPTARG;;
         n) normal=$OPTARG;;
-	m) method=$OPTARG;;
+	a) method=$OPTARG;;
         h) usage;;
     esac
 done
@@ -48,24 +47,10 @@ else
     usage
 
 fi
+
 source /etc/profile.d/modules.sh	
-module load  speedseq/20160506 novoBreak/v1.1.3 delly2/v0.7.7-multi samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+module load samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 mkdir temp
-
-genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
-
-if [[ $method == 'pindel' ]]
-then
-    module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q
-    echo -e "${sbam}\t400\t${tid}" > ${pair_id}.pindel.config
-    if [[ -n ${normal} ]]
-    then
-	echo -e "${normal}\t400\t${nid}" >> ${pair_id}.pindel.config
-    fi
-    pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
-    pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.pindel.vcf.gz
-fi
 
 if [[ $method == 'delly' ]]
 then
