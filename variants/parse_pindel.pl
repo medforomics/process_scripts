@@ -2,7 +2,6 @@
 #parse_pindel
 
 my $pair_id = shift @ARGV;
-my $tid = shift @ARGV;
 my $vcf = shift @ARGV;
 
 open SI, ">$pair_id.indel.vcf" or die $!;
@@ -34,7 +33,7 @@ while (my $line = <VCF>) {
   my $newformat = 'GT:DP:AD:AO:RO';
   my @newgts = ();
   my $missingGT = 0;
-  my %allele;
+  my @allele;
  FG:foreach my $i (0..$#gts) {
     my $sid = $subjacc[$i];
     my @gtinfo = split(/:/,$gts[$i]);
@@ -72,13 +71,11 @@ while (my $line = <VCF>) {
       $missingGT ++;
       next FG;
     }
-    $allele{$tid} = [sprintf("%.4f",$gtdata{AO}/$gtdata{DP}),$gtdata{DP}];
+    push @allele = sprintf("%.4f",$gtdata{AO}/$gtdata{DP});
     push @newgts, join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
   }
   next if ($missingGT == scalar(@gts));
-  next unless ($allele{$tid});
-  my ($taf,$tdp) = @{$allele{$tid}};
-  next if ($taf < 0.05 && $tdp < 10);
+
   if ($hash{SVTYPE} eq 'DUP:TANDEM') {
     print DUP join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
   }elsif ($hash{SVTYPE} eq 'INS') {
