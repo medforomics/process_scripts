@@ -11,13 +11,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:a:b:p:fh opt
+while getopts :r:a:b:p:m:fh opt
 do
     case $opt in
         r) refgeno=$OPTARG;;
         a) fq1=$OPTARG;;
         b) fq2=$OPTARG;;
         p) pair_id=$OPTARG;;
+	m) method=$OPTARG;;
 	f) filter=1;;
         h) usage;;
     esac
@@ -30,19 +31,39 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-index_path=${refgeno}/CTAT_lib/
+if [[ -z $SLURM_CPUS_ON_NODE ]]
+then
+    SLURM_CPUS_ON_NODE=1
+fi
+
 baseDir="`dirname \"$0\"`"
 source /etc/profile.d/modules.sh
 module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
-STAR-Fusion --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --output_dir star_fusion &> star_fusion.err
-mv star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
 
-
+if [[ $method == 'trinity' ]]
+then
+    module load trinity/1.4.0
+    tmphome="/tmp/$USER"
+    if [[ -z $tmphome ]]
+    then
+	mkdir $tmphome
+    fi 
+    export TMP_HOME=$tmphome
+    index_path=${refgeno}/CTAT_lib_trinity/
+    trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $SLURM_CPUS_ON_NODE --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir star_fusion
+    cp star_fusion/star-fusion.fusion_predictions.abridged.tsv ${pair_id}.starfusion.txt
+    cp star_fusion/star-fusion.fusion_predictions.abridged.coding_effect.tsv ${pair_id}.starfusion.coding_effect.txt
+else
+    module add star/2.5.2b
+    index_path=${refgeno}/CTAT_lib/
+    STAR-Fusion --genome_lib_dir ${index_path} --min_sum_frags 3 --left_fq ${fq1} --right_fq ${fq2} --output_dir star_fusion &> star_fusion.err
+    cp star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
+fi
 if [[ $filter==1 ]]
 then
-cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
-bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
-#cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint|perl -pe 's/:/\t/g' |awk '{print $1"\t"$2"\t"$4"\t"$5"\tAVG"}' > coords.txt
-#java -Xmx1G -jar /project/shared/bicf_workflow_ref/seqprg/oncofuse-1.1.1/Oncofuse.jar -a hg38 coords.txt coord AVG oncofuse.out
-perl $baseDir/filter_genefusions.pl -p ${pair_id} -f ${pair_id}.starfusion.txt
+    cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
+    bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
+    #cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint|perl -pe 's/:/\t/g' |awk '{print $1"\t"$2"\t"$4"\t"$5"\tAVG"}' > coords.txt
+    #java -Xmx1G -jar /project/shared/bicf_workflow_ref/seqprg/oncofuse-1.1.1/Oncofuse.jar -a hg38 coords.txt coord AVG oncofuse.out
+    perl $baseDir/filter_genefusions.pl -p ${pair_id} -f ${pair_id}.starfusion.txt
 fi

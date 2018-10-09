@@ -71,7 +71,7 @@ while (my $line = <VCF>) {
       $missingGT ++;
       next FG;
     }
-    push @allele = sprintf("%.4f",$gtdata{AO}/$gtdata{DP});
+    push @allele, sprintf("%.4f",$gtdata{AO}/$gtdata{DP});
     push @newgts, join(":",$gtdata{GT},$gtdata{DP},$gtdata{AD},$gtdata{AO},$gtdata{RO});
   }
   next if ($missingGT == scalar(@gts));
