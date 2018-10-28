@@ -33,7 +33,7 @@ fi
 if  [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]] 
 then
     tabix ${unionvcf}
-    bcftools annotate -Oz -a ${index_path}/gnomad.exomes.r2.0.2.HG38.vcf.gz -o ${pair_id}.gnomad.vcf.gz --columns CHROM,POS,AF,AF_raw,AF_POPMAX,POPMAX ${unionvcf}
+    bcftools annotate -Oz -a ${index_path}/gnomad.txt.gz -h ${index_path}/gnomad.header -c CHROM,POS,REF,ALT,GNOMAD_HOM,GNOMAD_AF,AF_POPMAX -o ${pair_id}.gnomad.vcf.gz ${unionvcf}
     tabix ${pair_id}.gnomad.vcf.gz 
     bcftools annotate -Oz -a ${index_path}/repeat_regions.bed.gz -o ${pair_id}.repeat.vcf.gz --columns CHROM,FROM,TO,RepeatType -h /project/shared/bicf_workflow_ref/RepeatType.header ${pair_id}.gnomad.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.repeat.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar annotate -id ${index_path}/dbSnp.vcf.gz -  | java -jar $SNPEFF_HOME/SnpSift.jar annotate -info CLNSIG,CLNDSDB,CLNDSDBID,CLNDBN,CLNREVSTAT,CLNACC ${index_path}/clinvar.vcf.gz - | java -jar $SNPEFF_HOME/SnpSift.jar annotate -info CNT ${index_path}/cosmic.vcf.gz - | java -Xmx10g -jar $SNPEFF_HOME/SnpSift.jar dbnsfp -v -db ${index_path}/dbNSFP.txt.gz - | bgzip > ${pair_id}.annot.vcf.gz
