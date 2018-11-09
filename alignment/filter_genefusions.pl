@@ -53,7 +53,8 @@ print OUT join("\t","FusionName","LeftGene","RightGene","LefttBreakpoint",
 	       "RightBreakpoint","LeftStrand","RightStrand","RNAReads",
 	       "DNAReads"),"\n";
 print OAS join("\t","FusionName","LeftGene","LefttBreakpoint","LeftGeneExons","LeftStrand",
-	       "RightGene","RightBreakpoint","RightGeneExons","RightStrand","RNAReads","DNAReads"),"\n";
+	       "RightGene","RightBreakpoint","RightGeneExons","RightStrand",
+	       "RNAReads","DNAReads","FusionType","Annot"),"\n";
 
 print OUTIR join("\t","Hugo_Symbol","Entrez_Gene_Id","Center","Tumor_Sample_Barcode",
                "Fusion","DNA_support","RNA_support","Method","Frame"),"\n";
