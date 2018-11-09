@@ -63,7 +63,7 @@ else
     else
 	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/hisat_index/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
-    if [[ $umi==1 ]]
+    if [[ $umi == 1 ]]
     then
 	python ${baseDir}/add_umi_sam.py -s out.sam -o output.bam
     else
