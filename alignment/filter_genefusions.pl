@@ -91,6 +91,7 @@ while (my $line = <FUSION>) {
       $leftexon = $exonnuminfo{$key}{leftgene};
       $rightexon = $exonnuminfo{$key}{rightgene};
   }
+  $hash{PROT_FUSION_TYPE} = 'in-frame' if ($hash{PROT_FUSION_TYPE} eq 'INFRAME');
   my ($dna_support,$rna_support)=("no") x 2;
   if ($known{$fname2} && ($hash{SumRNAReads} >= 3)|| ($hash{SumRNAReads} >= 5)) {
     $rna_support = "yes";
@@ -99,11 +100,11 @@ while (my $line = <FUSION>) {
 		   $hash{RightStrand},$hash{SumRNAReads},0),"\n";
     print OAS join("\t",$fname,$hash{LeftGene},$hash{LeftBreakpoint},$leftexon,$hash{LeftStrand},
 		   $hash{RightGene},$hash{RightBreakpoint},$rightexon,$hash{RightStrand},
-		   $hash{SumRNAReads},0,$hash{PROT_FUSION_TYPE},$hash{annots}),"\n";
+		   $hash{SumRNAReads},0,lc($hash{PROT_FUSION_TYPE}),$hash{annots}),"\n";
     print OUTIR join("\t",$hash{LeftGene},$entrez{$hash{LeftGene}},"UTSW",$sname,$fname." fusion",
-		     $dna_support,$rna_support,"STAR Fusion","N/A"),"\n";
+		     $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
     print OUTIR join("\t",$hash{RightGene},$entrez{$hash{RightGene}},"UTSW",$sname,$fname." fusion",
-                     $dna_support,$rna_support,"STAR Fusion","N/A"),"\n";
+                     $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
   }
 }
 
