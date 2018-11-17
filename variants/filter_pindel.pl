@@ -6,6 +6,7 @@ use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
 my $results = GetOptions (\%opt,'td|d=s','indel|i=s','sv|s=s','tumor|t=s');
 
+
 my @files = grep(/vcf.gz/,values %opt);
 foreach $file (@files) {
   chomp($file);
@@ -22,6 +23,14 @@ foreach $file (@files) {
 	my @header = split(/\t/,$line);
 	($chrom, $pos,$id,$ref,$alt,$score,
 	 $filter,$info,$format,@gtheader) = split(/\t/, $line);
+	unless ($opt{tumor}) {
+	    if (grep(/T_DNA/,@gtheader)) {
+		my @tsamps = grep(/T_DNA/,@gtheader);
+		$opt{tumor} = $tsamps[0];
+	    }else {
+		$opt{tumor} = $gtheader[0];
+	    }
+	}
       }
       next;
     }
