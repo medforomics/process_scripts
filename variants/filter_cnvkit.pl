@@ -73,7 +73,7 @@ while (my $line = <CNR>) {
 }
 
 open IN, "<$file" or die $!;
-my $header = <IN>;
+$header = <IN>;
 while (my $line = <IN>) {
     chomp($line);
     my ($chr,$start,$end,$geneids,$log2,$cn,$depth,
