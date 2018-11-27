@@ -60,11 +60,19 @@ while (my $line = <CNR>) {
     my ($chr,$start,$end,$geneids,$log2,$depth,$weight) = split(/\t/,$line);
     my $key = $chr.":".$start."-".$end;
     my %genes;
-    my @ids = split(/;|,/,$geneids);
-    foreach my $gid (@ids) {
-	my ($key,$value) = split(/=/,$gid);
-	if ($key eq 'ensembl_gn' || $key eq 'identifier') {
-	    $genes{$value} = 1 if $keep{$value};
+    if ($geneids =~ m/ensembl_gn/g) {
+	my @ids = split(/;|,/,$geneids);
+	foreach my $gid (@ids) {
+	    my ($key,$value) = split(/=/,$gid);
+	    if ($key eq 'ensembl_gn' || $key eq 'identifier') {
+		$genes{$value} = 1 if $keep{$value};
+	    }
+	}
+    }else {
+	my @ids = split(/,/,$geneids);
+	foreach my $gid (@ids) {
+	    my ($gene,$trxid,$exonnum,$strand) = split(/\|/,$gid);
+	    $genes{$gene} = 1 if $keep{$gene};
 	}
     }
     foreach $gene (keys %genes) {
@@ -81,11 +89,19 @@ while (my $line = <IN>) {
     next if ($chr eq 'chrX' && $cn == 1);
     my $key = $chr.":".$start."-".$end;
     my %genes;
-    my @ids = split(/;|,/,$geneids);
-    foreach my $gid (@ids) {
-	my ($key,$value) = split(/=/,$gid);
-	if ($key eq 'ensembl_gn' || $key eq 'identifier') {
-	    $genes{$value} = 1 if $keep{$value};
+    if ($geneids =~ m/ensembl_gn/g) {
+	my @ids = split(/;|,/,$geneids);
+	foreach my $gid (@ids) {
+	    my ($key,$value) = split(/=/,$gid);
+	    if ($key eq 'ensembl_gn' || $key eq 'identifier') {
+		$genes{$value} = 1 if $keep{$value};
+	    }
+	}
+    }else {
+	my @ids = split(/,/,$geneids);
+	foreach my $gid (@ids) {
+	    my ($gene,$trxid,$exonnum,$strand) = split(/\|/,$gid);
+	    $genes{$gene} = 1 if $keep{$gene};
 	}
     }
     my $len = sprintf("%.1f",($end-$start)/1000);
