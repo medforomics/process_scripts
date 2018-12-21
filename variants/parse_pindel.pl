@@ -77,14 +77,15 @@ while (my $line = <VCF>) {
   next if ($missingGT == scalar(@gts));
 
   if ($hash{SVTYPE} eq 'DUP:TANDEM') {
-    print DUP join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
+    print DUP join("\t",$chrom,$pos,$id,'N','<DUP>',$score,$filter,$annot,$newformat,@newgts),"\n";
   }elsif ($hash{SVTYPE} eq 'INS') {
-    print SV join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
+    print SV join("\t",$chrom,$pos,$id,'N','<INS>',$score,$filter,$annot,$newformat,@newgts),"\n";
   }elsif ($hash{SVTYPE} eq 'DEL' || $hash{SVTYPE} eq 'INS') {
     if (abs($hash{SVLEN}) < 50) {
       print SI join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
     }else {
-      print SV join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
+	$newalt = "<".$hash{SVTYPE}.">";
+      print SV join("\t",$chrom,$pos,$id,'N',$newalt,$score,$filter,$annot,$newformat,@newgts),"\n";
     }
   }
 }
