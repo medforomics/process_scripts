@@ -49,7 +49,7 @@ then
 elif [[ $capture == '/project/shared/bicf_workflow_ref/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
 then
     normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
-    target='panel1385V2-2.cnvkit_'
+    targets="${index_path}/panel1385V2-2.cnvkit_"
 fi
 
 echo "${targets}targets.bed"
