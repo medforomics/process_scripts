@@ -32,7 +32,8 @@ foreach $file (@files) {
     while (my $line = <IN>) {
 	chomp($line);
 	my ($ensid,$gene,$chr,$strand,$start,$end,$cov,$fpkm,$tmp) = split(/\t/,$line);
-	$cts{$ensid}{$sample} = $fpkm;
+	my ($ens,$version) = split(/\./,$ensid);
+	$cts{$ens}{$sample} = $fpkm;
     }
     close IN;
 }
