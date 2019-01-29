@@ -15,7 +15,7 @@ while (my $line = <SYM>) {
     chomp($line);
     my ($chrom,$start,$end,$ensembl,$symbol,$type) = split(/\t/,$line);
     $ensembl = (split(/\./,$ensembl))[0];
-    $names{$symbol} = {ensembl=>$ensembl,type=>$type};
+    $names{$ensembl} = {symbol=>$symbol,type=>$type};
 }
 
 my @files = @ARGV;
@@ -32,7 +32,8 @@ foreach $file (@files) {
     while (my $line = <IN>) {
 	chomp($line);
 	my ($ensid,$gene,$chr,$strand,$start,$end,$cov,$fpkm,$tmp) = split(/\t/,$line);
-	$cts{$gene}{$sample} = $fpkm;
+	my ($ens,$version) = split(/\./,$ensid);
+	$cts{$ens}{$sample} = $fpkm;
     }
     close IN;
 }
@@ -57,7 +58,7 @@ foreach $gene (keys %cts) {
     #next unless ($sortct[0] >= 1);
     next if ($names{$gene}{type} eq 'rRNA');
     next if ($exc{$gene});
-    print OUT join("\t",$names{$gene}{ensembl},$gene,
+    print OUT join("\t",$gene,$names{$gene}{symbol},
 		   $names{$gene}{type},@line),"\n";
 }
 close OUT;
