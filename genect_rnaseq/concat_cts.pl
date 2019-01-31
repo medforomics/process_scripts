@@ -78,7 +78,7 @@ foreach $gene (keys %cts) {
 	}
 	$cpm = ($cts{$gene}{$sample}/$total{$sample})*1e6;
 	push @cpm, sprintf("%.2f",log2($cpm));
-	push @line, $cts{$gene}{$sample};
+	push @line,  sprintf("%.0f",$cts{$gene}{$sample});
     }
     my @sortct = sort {$b cmp $a} @cpm;
     #next unless ($sortct[0] >= 1);
