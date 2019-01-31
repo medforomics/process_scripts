@@ -57,8 +57,8 @@ elif [ $algo == 'fgbio_umi' ]
 then
     module load fgbio bwa/intel/0.7.15
     samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
-    fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -e 0 -m 0
-    fgbio CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
+    fgbio -Djava.io.tmpdir=./ GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam -e 0 -m 0
+    fgbio -Djava.io.tmpdir=./ CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
     samtools index ${pair_id}.consensus.bam
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
     gzip ${pair_id}.consensus.R1.fastq
