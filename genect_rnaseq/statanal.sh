@@ -17,6 +17,7 @@ do
 done
 
 shift $(($OPTIND -1))
+baseDir="`dirname \"$0\"`"
 
 # Check for mandatory options
 if [[ -z $SLURM_CPUS_ON_NODE ]]
@@ -25,9 +26,9 @@ then
 fi
 source /etc/profile.d/modules.sh
 
-perl $baseDir/scripts/concat_cts.pl -o ./ *.cts
-perl $baseDir/scripts/concat_fpkm.pl -o ./ *.fpkm.txt
-perl $baseDir/scripts/concat_ctsum.pl -o ./ *.cts.summary
+perl $baseDir/concat_cts.pl -o ./ *.cts
+perl $baseDir/concat_fpkm.pl -o ./ *.fpkm.txt
+perl $baseDir/concat_ctsum.pl -o ./ *.cts.summary
 cp design.txt design.shiny.txt
 cp geneset.gmt geneset.shiny.gmt
 
@@ -37,7 +38,7 @@ then
     touch bg.rda
 else
     module load R/3.2.1-intel
-    Rscript  $baseDir/scripts/dea.R
-    Rscript $baseDir/scripts/build_ballgown.R *_stringtie
-    perl $baseDir/scripts/concat_edgeR.pl *.edgeR.txt
+    Rscript  $baseDir/dea.R
+    Rscript $baseDir/build_ballgown.R *_stringtie
+    perl $baseDir/concat_edgeR.pl *.edgeR.txt
 fi
