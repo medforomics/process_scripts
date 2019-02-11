@@ -29,6 +29,8 @@ while (my $line = <OM>) {
 my @exonfiles = `ls */*.exons.txt`;
 foreach $efile (@exonfiles) {
     chomp($efile);
+    my @leftexons;
+    my @rightexons;
     my ($dir,$pair,@etc) = split(/\/|\./,$efile);
     open EFILE, "<$efile" or die $!;
     my $header = <EFILE>;
