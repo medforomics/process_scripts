@@ -6,7 +6,7 @@ use File::Basename;
 
 my $results= GetOptions (\%opt,'fpkm|f=s','logcpm|l=s','cnv|c=s','prefix|p=s','help|h');
 
-open ENT_ENS, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
+open ENT_ENS, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
 my %entrez;
 my $ent_header = <ENT_ENS>;
 while (my $line = <ENT_ENS>){
@@ -24,7 +24,7 @@ while (my $line = <ENT_ENS>){
   $entrez{$row[3]}=$entrez{$row[4]};
 }
 close ENT_ENS;
-open ENT_ENS, "</project/shared/bicf_workflow_ref/gene2ensembl.human.txt" or die $!;
+open ENT_ENS, "</project/shared/bicf_workflow_ref/human/gene2ensembl.human.txt" or die $!;
 my $ens_header = <ENT_ENS>;
 while (my $line = <ENT_ENS>){
   chomp $line;

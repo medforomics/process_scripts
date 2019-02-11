@@ -6,7 +6,7 @@ use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
 my $results = GetOptions (\%opt,'fusion|f=s','prefix|p=s','help|h');
 my %entrez;
-open ENT, "</project/shared/bicf_workflow_ref/gene_info.human.txt" or die $!;
+open ENT, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
 my $headline = <ENT>;
 while (my $line = <ENT>) {
   chomp($line);

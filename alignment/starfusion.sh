@@ -60,7 +60,7 @@ else
     cp ${pair_id}_star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
 fi
 
-module load singularity/2.6.0
+module load singularity/2.6.1
 export PYENSEMBL_CACHE_DIR="/project/shared/bicf_workflow_ref/singularity_images"
 cut -f 5-8 ${pair_id}.starfusion.txt |perl -pe 's/\^|:/\t/g' | awk '{print "singularity exec /project/shared/bicf_workflow_ref/singularity_images/agfusion.simg agfusion annotate  -db  /project/shared/bicf_workflow_ref/singularity_images/pyensembl/GRCh38/ensembl92/agfusion.homo_sapiens.92.db -g5", $1,"-j5",$4,"-g3",$6,"-j3",$9,"-o",$1"_"$4"_"$6"_"$9}' |grep -v 'LeftGene' |sh
 
