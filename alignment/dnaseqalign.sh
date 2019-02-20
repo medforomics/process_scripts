@@ -59,7 +59,7 @@ fi
 if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
-elif [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
+elif [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
 elif [[ $umi == 'umi' ]]
