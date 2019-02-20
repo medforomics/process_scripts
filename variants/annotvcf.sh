@@ -25,12 +25,12 @@ shift $(($OPTIND -1))
 source /etc/profile.d/modules.sh
 module load python/2.7.x-anaconda bedtools/2.26.0 samtools/1.6 snpeff/4.3q
 
-if [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38/hisat_index' ]]
+if [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38/hisat_index' ]]
 then
-    index_path='/project/shared/bicf_workflow_ref/GRCh38'
+    index_path='/project/shared/bicf_workflow_ref/human/GRCh38'
 fi
 
-if  [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]] 
+if  [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]] 
 then
     tabix ${unionvcf}
     bcftools annotate -Oz -a ${index_path}/gnomad.txt.gz -h ${index_path}/gnomad.header -c CHROM,POS,REF,ALT,GNOMAD_HOM,GNOMAD_AF,AF_POPMAX -o ${pair_id}.gnomad.vcf.gz ${unionvcf}

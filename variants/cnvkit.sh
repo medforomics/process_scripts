@@ -46,7 +46,7 @@ then
     then
 	normals="${index_path}/UTSWV2.uminormals.cnn"
     fi
-elif [[ $capture == '/project/shared/bicf_workflow_ref/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
+elif [[ $capture == '/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
 then
     normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
     targets="${index_path}/panel1385V2-2.cnvkit_"
