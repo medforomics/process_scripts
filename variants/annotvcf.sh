@@ -39,10 +39,10 @@ then
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-downstream -no-upstream -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.repeat.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar annotate -id ${index_path}/dbSnp.vcf.gz -  | java -jar $SNPEFF_HOME/SnpSift.jar annotate -info CLNSIG,CLNDSDB,CLNDSDBID,CLNDBN,CLNREVSTAT,CLNACC ${index_path}/clinvar.vcf.gz - | java -jar $SNPEFF_HOME/SnpSift.jar annotate -info CNT ${index_path}/cosmic.vcf.gz - | java -Xmx10g -jar $SNPEFF_HOME/SnpSift.jar dbnsfp -v -db ${index_path}/dbNSFP.txt.gz - | bgzip > ${pair_id}.annot.vcf.gz
     tabix ${pair_id}.annot.vcf.gz
 else 
-    if [[ $index_path == '/project/shared/bicf_workflow_ref/GRCm38' ]]
+    if [[ $index_path == '/project/shared/bicf_workflow_ref/mouse/GRCm38' ]]
     then
 	snpeffvers='GRCh38.86'
-    elif [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh37' ]]
+    elif [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh37' ]]
     then
 	snpeffvers='GRCh37.75'
     fi
