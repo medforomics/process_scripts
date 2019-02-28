@@ -8,7 +8,7 @@ usage() {
   echo "-n  --NucType"
   echo "-p  --Prefix for output file name"
   echo "-c  --Capture Bedfile"
-  echo "Example: bash bamqc.sh -p prefix -r /project/shared/bicf_workflow_ref/GRCh38 -b SRR1551047.bam  -n dna -c target.bed"
+  echo "Example: bash bamqc.sh -p prefix -r /project/shared/bicf_workflow_ref/human/GRCh38 -b SRR1551047.bam  -n dna -c target.bed"
   exit 1
 }
 OPTIND=1 # Reset OPTIND

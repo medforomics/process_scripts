@@ -36,7 +36,7 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
     SLURM_CPUS_ON_NODE=1
 fi
 
-index_path=/project/shared/bicf_workflow_ref/GRCh38
+index_path=/project/shared/bicf_workflow_ref/human/GRCh38
 
 genome_reference=${index_path}/genome.fa
 cosmic_reference=${index_path}/cosmic.vcf.gz
@@ -76,7 +76,7 @@ fi
 if [ $algo == 'mutect' ]
   then
     module load parallel python/2.7.x-anaconda gatk/3.8  bcftools/intel/1.3 bedtools/2.25.0 snpeff/4.2 vcftools/0.1.14
-    cut -f 1 /project/shared/bicf_workflow_ref/GRCh38/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar $GATK_JAR -R ${genome_reference} -D ${dbSnp_reference} -T MuTect2 -stand_call_conf 30 -stand_emit_conf 10.0 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor}.final.bam -I:normal ${normal}.final.bam --cosmic ${cosmic} -o ${tumor}.{}.mutect.vcf -L {}"
+    cut -f 1 /project/shared/bicf_workflow_ref/human/GRCh38/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Xmx20g -jar $GATK_JAR -R ${genome_reference} -D ${dbSnp_reference} -T MuTect2 -stand_call_conf 30 -stand_emit_conf 10.0 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -I:tumor ${tumor}.final.bam -I:normal ${normal}.final.bam --cosmic ${cosmic} -o ${tumor}.{}.mutect.vcf -L {}"
     vcf-concat ${tumor}*.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '((FS <= 60) & GEN[*].DP >= 10)' | perl -pe 's/TUMOR/'${tumor}'/' | perl -pe 's/NORMAL/'${normal}'/g' |bgzip > ${tumor}_${normal}.mutect.vcf.gz
 fi
 

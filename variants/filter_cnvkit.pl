@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #parse_cnvkit_table.pl
 
-my $refdir = '/project/shared/bicf_workflow_ref/GRCh38/';
+my $refdir = '/project/shared/bicf_workflow_ref/human/GRCh38/';
 open OM, "<$refdir\/clinseq_prj/panel1410.genelist.txt" or die $!;
 while (my $line = <OM>) {
   chomp($line);
