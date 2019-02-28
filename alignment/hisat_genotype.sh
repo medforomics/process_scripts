@@ -41,9 +41,9 @@ diff $fq1 $fq2 > difffile
 
 if [ -s difffile ]
 then
-hisatgenotype_extract_reads.py  -p 16  --database-list hla --base /project/shared/bicf_workflow_ref/hisat_genotype_hla/genotype_genome -1 $fq1 -2 $fq2 --out-dir hisatgeno_out
+hisatgenotype_extract_reads.py  -p 16  --database-list hla --base /project/shared/bicf_workflow_ref/human/hisat_genotype_hla/genotype_genome -1 $fq1 -2 $fq2 --out-dir hisatgeno_out
 else
-hisatgenotype_extract_reads.py  -p 16  --database-list hla --base /project/shared/bicf_workflow_ref/hisat_genotype_hla/genotype_genome -U $fq1 --out-dir hisatgeno_out
+hisatgenotype_extract_reads.py  -p 16  --database-list hla --base /project/shared/bicf_workflow_ref/human/hisat_genotype_hla/genotype_genome -U $fq1 --out-dir hisatgeno_out
 fi
 hisatgenotype_locus_samples.py -p 16 --region-list hla.A,hla.B,hla.C,hla.DQA1,hla.DQB1,hla.DRB1,hla.DPB1 --assembly --read-dir hisatgeno_out --out-dir ${pair_id}.hisat_hla > ${pair_id}.hisat_hla.txt
 
