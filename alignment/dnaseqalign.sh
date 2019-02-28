@@ -56,7 +56,7 @@ else
     bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
 fi
 
-if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/GRCh38' ]]
+if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
 then
     k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
 elif [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
