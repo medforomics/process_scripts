@@ -7,7 +7,7 @@ usage() {
   echo "-a  --FastQ R1"
   echo "-b  --FastQ R2"
   echo "-p  --Prefix for output file name"
-  echo "Example: bash starfusion.sh -p prefix -r /project/shared/bicf_workflow_ref/GRCh38 -a SRR1551047_1.fastq.gz  -b SRR1551047_2.fastq.gz"
+  echo "Example: bash starfusion.sh -p prefix -r /project/shared/bicf_workflow_ref/human/GRCh38 -a SRR1551047_1.fastq.gz  -b SRR1551047_2.fastq.gz"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
@@ -67,7 +67,7 @@ cut -f 5-8 ${pair_id}.starfusion.txt |perl -pe 's/\^|:/\t/g' | awk '{print "sing
 if [[ $filter == 1 ]]
 then
     cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
-    bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
+    bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/human/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
     perl $baseDir/filter_genefusions.pl -p ${pair_id} -f ${pair_id}.starfusion.txt
 fi
 

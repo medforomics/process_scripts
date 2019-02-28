@@ -9,7 +9,7 @@ usage() {
   echo "-a  --Method: hisat or star"
   echo "-p  --Prefix for output file name"
   echo "-u  --UMI sequences are in FQ Read Name"
-  echo "Example: bash rnaseqalign.sh -a hisat -p prefix -u -r /project/shared/bicf_workflow_ref/GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
+  echo "Example: bash rnaseqalign.sh -a hisat -p prefix -u -r /project/shared/bicf_workflow_ref/human/GRCh38 -x SRR1551047_1.fastq.gz  -y SRR1551047_2.fastq.gz"
   exit 1
 }
 OPTIND=1 # Reset OPTIND

@@ -15,7 +15,7 @@ while (my $line = <ENT_ENS>){
   $entrez{$row[2]}=$row[1];
 }
 close ENT_ENS;
-open ENT_ENS, "</project/shared/bicf_workflow_ref/GRCh38/genenames.txt" or die $!;
+open ENT_ENS, "</project/shared/bicf_workflow_ref/human/GRCh38/genenames.txt" or die $!;
 my $gn_header = <ENT_ENS>;
 my %ensym;
 while (my $line = <ENT_ENS>){
