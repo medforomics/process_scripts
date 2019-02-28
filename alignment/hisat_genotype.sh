@@ -11,10 +11,9 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:x:y:p:uh opt
+while getopts :x:y:p:uh opt
 do
     case $opt in
-        r) index_path=$OPTARG;;
         x) fq1=$OPTARG;;
         y) fq2=$OPTARG;;
 	u) umi='umi';;
@@ -26,7 +25,7 @@ done
 shift $(($OPTIND -1))
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
+if [[ -z $pair_id ]]; then
     usage
 fi
 
