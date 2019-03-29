@@ -17,7 +17,7 @@ do
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         b) sbam=$OPTARG;;
-        i) tid=$OPTARG;;
+        i) tumor=$OPTARG;;
         n) normal=$OPTARG;;
 	a) method=$OPTARG;;
         h) usage;;
@@ -86,7 +86,7 @@ then
     #MERGE DELLY AND MAKE BED
     bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
     bgzip delly.vcf
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.delly.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.sv.vcf.gz
 fi
 
 if [[ $method == 'lumpy' ]]
@@ -107,5 +107,5 @@ then
     else
 	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.sv.vcf.gz
 fi
