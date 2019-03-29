@@ -124,3 +124,18 @@ then
     strelka/runWorkflow.py -m local -j 8
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi
+elif [[ $algo == 'gatk4' ]]
+then
+		gatk4_dbsnp=/project/PHG/PHG_Clinical/devel/phg_workflow/_reference_files/dbSnp.vcf.gz
+        user=$USER
+        module load gatk/4.x samtools/1.6
+        mkdir /tmp/${user}
+        export TMP_HOME=/tmp/${user}
+        singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" BaseRecalibrator -I ${bam} --known-sites ${gatk4_dbsnp} -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+        #singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${bam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table --static-quantized-quals 10 --static-quantize
+        singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${bam} -R ${reffa} -O ${pair_id}.final.gatk4.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+        chrinterval=${ref}/genomefile.chr.txt
+        cut -f 1 ${chrinterval} | parallel --delay 2 -j 2 ' singularity exec -H /tmp/'${user}' /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" HaplotypeCaller -R '${reffa}' -I '${pair_id}'.final.gatk4.bam -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance --emit-ref-confidence GVCF -O '${pair_id}'.{}.vcf.gz -L {}'
+        vcf-concat ${pair_id}.*.vcf.gz | vcf-sort > haplotypecaller.vcf
+        java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf O=${pair_id}.haplotypecaller.vcf R=${reffa} CREATE_INDEX=TRUE
+fi
