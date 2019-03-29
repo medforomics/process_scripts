@@ -48,6 +48,7 @@ foreach $vcf (@vcffiles) {
     my $newformat = 'GT:DP:AD:AO:RO';
     my %newgts;
     my %afinfo;
+    my %gtfilt;
     my $missingGT = 0;
   FG:foreach my $i (0..$#gts) {
       my $allele_info = $gts[$i];
@@ -66,6 +67,9 @@ foreach $vcf (@vcffiles) {
 	$newgts{$sid} = '.:.:.:.:.';
 	$missingGT ++;
 	next FG;
+      }
+      if ($gtdata{FT} && $gtdata{FT} =~ m/HighSNVSB/) {
+	  $gtfilt{'StrandBias'} = 1;
       }
       if ($gtdata{DP4}) { #varscan uses this
 	my ($ref_fwd,$ref_rev,$alt_fwd,$alt_rev) = split(',',$gtdata{DP4});
@@ -117,6 +121,17 @@ foreach $vcf (@vcffiles) {
     foreach $id (@sampleorder) {
       push @gtdesc, join(":",$id,$afinfo{$id});
       push @newgts, $newgts{$id};
+    }
+    my @filts = split(";",$filter);
+    my %filterqc = map {$_ => 1} @filts;
+    delete $filterqc{'.'};
+    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60) || 
+	($hash{SAP} && $hash{SAP} > 20)) {
+	$filterqc{strandBias} = 1;
+    }if (scalar(keys %filterqc) > 1) {
+	$filter = join(";",keys %filterqc);
+    }else {
+	$filter = '.';
     }
     $lines{$chrom}{$pos}{$alt}{$caller} = [$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,\@newgts,\@gtdesc];
   }
