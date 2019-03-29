@@ -122,11 +122,16 @@ foreach $vcf (@vcffiles) {
       push @gtdesc, join(":",$id,$afinfo{$id});
       push @newgts, $newgts{$id};
     }
-    if ($gtfilt{'StrandBias'}) {
-	$filter = $filter.";strandBias";
-    } elsif (($hash{FS} && $hash{FS} > 60) 
-	     || ($hash{SAP} && $hash{SAP} > 20)) { 
-	$filter = $filter.";strandBias";
+    my @filts = split(";",$filter);
+    my %filterqc = map {$_ => 1} @filts;
+    delete $filterqc{'.'};
+    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60) || 
+	($hash{SAP} && $hash{SAP} > 20)) {
+	$filterqc{strandBias} = 1;
+    }if (scalar(keys %filterqc) > 1) {
+	$filter = join(";",keys %filterqc);
+    }else {
+	$filter = '.';
     }
     $lines{$chrom}{$pos}{$alt}{$caller} = [$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,\@newgts,\@gtdesc];
   }
