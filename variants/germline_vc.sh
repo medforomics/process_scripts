@@ -76,7 +76,8 @@ elif [[ $algo == 'hotspot' ]]
 then
     samtools mpileup -d 99999 -t 'AD,DP,INFO/AD' -uf ${reffa} *.bam > ${pair_id}.mpi
     bcftools filter -i "AD[1]/DP > 0.01" ${pair_id}.mpi | bcftools filter -i "DP > 50" | bcftools call -m -A |vcf-annotate -n --fill-type |  bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.lowfreq.vcf.gz -
-    java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "(CNT[*] >0)" - |bgzip > ${pair_id}.hotspot.vcf.gz
+    tabix ${pair_id}.lowfreq.vcf.gz
+    bcftools annotate -Ov -a ${index_path}/oncokb_hotspot.txt.gz -h ${index_path}/oncokb_hotspot.header -c CHROM,FROM,TO,OncoKB_REF,OncoKB_ALT,Gene,OncoKB_ProteinChange,OncoKB_AF,OncoTree_Tissue,OncoTree_MainType,OncoTree_Code,OncoKBHotspot ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz - | grep '#\|CNT\|OncoKBHotspot' | bgzip > ${pair_id}.hotspot.vcf.gz
 elif [[ $algo == 'speedseq' ]]
 then
     module load speedseq/gcc/0.1.2
