@@ -34,7 +34,7 @@ fi
 baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
-module load picard/2.10.3 samtools/1.6
+module load picard/2.10.3 samtools/gcc/1.8
 
 if [ $algo == 'sambamba' ]
 then
@@ -42,7 +42,6 @@ then
     sambamba markdup -t $SLURM_CPUS_ON_NODE ${sbam} ${pair_id}.dedup.bam
 elif [ $algo == 'samtools' ]
 then
-    module load samtools/1.6
     samtools sort -n -@ $SLURM_CPUS_ON_NODE -o nsort.bam ${sbam}
     samtools fixmate -c --output-fmt BAM -m -@ $SLURM_CPUS_ON_NODE nsort.bam fix.bam
     samtools sort -n -@ $SLURM_CPUS_ON_NODE -o sort.bam fix.bam
@@ -68,3 +67,4 @@ then
 else
     cp ${sbam} ${pair_id}.dedup.bam    
 fi
+samtools index --threads $SLURM_CPUS_ON_NODE ${pair_id}.dedup.bam

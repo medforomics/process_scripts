@@ -57,7 +57,7 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load python/2.7.x-anaconda picard/2.10.3 samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
+module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]
@@ -68,43 +68,51 @@ done
 
 if [[ $algo == 'mpileup' ]]
 then
-    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "samtools mpileup -t 'AD,DP,INFO/AD' -ug -Q20 -C50 -r {} -f ${reffa} *.bam | bcftools call -vmO z -o ${pair_id}.samchr.{}.vcf.gz"
-    vcf-concat ${pair_id}.samchr.*.vcf.gz |vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf -
+    threads=`expr $SLURM_CPUS_ON_NODE - 10`
+    bcftools mpileup --threads $threads -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} *.bam | bcftools call --threads 10 -vmO z -o ${pair_id}.vcf.gz
+    vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
     bgzip ${pair_id}.sam.vcf
-elif [[ $algo == 'hotspot' ]]
+    
+elif [[ $algo == 'freebayes' ]]
 then
-    samtools mpileup -d 99999 -t 'AD,DP,INFO/AD' -uf ${reffa} *.bam > ${pair_id}.mpi
-    bcftools filter -i "AD[1]/DP > 0.01" ${pair_id}.mpi | bcftools filter -i "DP > 50" | bcftools call -m -A |vcf-annotate -n --fill-type |  bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.lowfreq.vcf.gz -
-    tabix ${pair_id}.lowfreq.vcf.gz
-    bcftools annotate -Ov -a ${index_path}/oncokb_hotspot.txt.gz -h ${index_path}/oncokb_hotspot.header -c CHROM,FROM,TO,OncoKB_REF,OncoKB_ALT,Gene,OncoKB_ProteinChange,OncoKB_AF,OncoTree_Tissue,OncoTree_MainType,OncoTree_Code,OncoKBHotspot ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz - | grep '#\|CNT\|OncoKBHotspot' | bgzip > ${pair_id}.hotspot.vcf.gz
-elif [[ $algo == 'speedseq' ]]
-then
-    module load speedseq/gcc/0.1.2
-    speedseq var -t $SLURM_CPUS_ON_NODE -o ssvar ${reffa} *.bam
-    vcf-annotate -n --fill-type ssvar.vcf.gz| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.ssvar.vcf.gz -
+    module load freebayes/gcc/1.2.0
+    bamlist=''
+    for i in *.bam; do
+    bamlist="$bamlist --bam ${i}"
+    done
+    freebayes-parallel ${index_path}/genomefile.5M.txt $SLURM_CPUS_ON_NODE -f ${reffa} --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 --vcf fb.vcf $bamlist
+    vcf-annotate -n --fill-type fb.vcf| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
+
 elif [[ $algo == 'gatk' ]]
 then
-    module load gatk/3.8
+    gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
+    user=$USER
+    module load gatk/4.x singularity/2.6.1
+    mkdir /tmp/${user}
+    export TMP_HOME=/tmp/${user}
     gvcflist=''
     for i in *.bam; do
-	cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.{}.chr.gatk.g.vcf -nct 2 -L {}"
-	vcf-concat ${i}.*.chr.gatk.g.vcf |vcf-sort > gatk.g.vcf
-	rm ${i}.*.chr.gatk.g.vcf
-	java -jar $PICARD/picard.jar SortVcf I=gatk.g.vcf O=${i}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
-	gvcflist="$gvcflist --variant ${i}.gatk.g.vcf"
+	prefix="${i%.bam}"
+	echo ${prefix}
+	singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth  -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -O haplotypecaller.vcf.gz
+	java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf.gz O=${prefix}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
+	
+	gvcflist="$gvcflist --variant ${prefix}.gatk.g.vcf"
     done
-    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs --disable_auto_index_creation_and_locking_when_reading_rods -o gatk.vcf $gvcflist
+    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs $gvcflist -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
+
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
     bamlist=`join_by , *.bam`
-    Platypus.py callVariants --minMapQual=10 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
+    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
+
 elif [[ $algo == 'strelka2' ]]
 then
     if [[ $rna == 1 ]]
@@ -113,7 +121,7 @@ then
     else
 	mode="--exome"
     fi
-    module load strelka/2.9.0 samtools/1.6 manta/1.3.1 snpeff/4.3q vcftools/0.1.14
+    module load strelka/2.9.10 manta/1.3.1
     mkdir manta strelka
     gvcflist=''
     for i in *.bam; do
@@ -124,19 +132,4 @@ then
     configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
     strelka/runWorkflow.py -m local -j 8
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
-fi
-elif [[ $algo == 'gatk4' ]]
-then
-		gatk4_dbsnp=/project/PHG/PHG_Clinical/devel/phg_workflow/_reference_files/dbSnp.vcf.gz
-        user=$USER
-        module load gatk/4.x samtools/1.6
-        mkdir /tmp/${user}
-        export TMP_HOME=/tmp/${user}
-        singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" BaseRecalibrator -I ${bam} --known-sites ${gatk4_dbsnp} -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
-        #singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${bam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table --static-quantized-quals 10 --static-quantize
-        singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${bam} -R ${reffa} -O ${pair_id}.final.gatk4.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
-        chrinterval=${ref}/genomefile.chr.txt
-        cut -f 1 ${chrinterval} | parallel --delay 2 -j 2 ' singularity exec -H /tmp/'${user}' /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" HaplotypeCaller -R '${reffa}' -I '${pair_id}'.final.gatk4.bam -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance --emit-ref-confidence GVCF -O '${pair_id}'.{}.vcf.gz -L {}'
-        vcf-concat ${pair_id}.*.vcf.gz | vcf-sort > haplotypecaller.vcf
-        java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf O=${pair_id}.haplotypecaller.vcf R=${reffa} CREATE_INDEX=TRUE
 fi

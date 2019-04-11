@@ -57,7 +57,11 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load gatk/3.8 samtools/1.6
+user=$USER
+module load gatk/4.x singularity/2.6.1
+mkdir /tmp/${user}
+export TMP_HOME=/tmp/${user}
+
 samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
 
 if [[ $algo == 'gatkbam_rna' ]]
@@ -72,11 +76,17 @@ then
     java -Xmx16g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -I ${pair_id}.split.bam -R ${reffa} --filter_mismatching_base_and_quals -T IndelRealigner -targetIntervals ${pair_id}.bam.list -o ${pair_id}.realigned.bam
     java -Xmx16g -jar $GATK_JAR -l INFO -R ${reffa} --knownSites ${dbsnp} -I ${pair_id}.realigned.bam -T BaseRecalibrator -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov ContextCovariate -o ${pair_id}.recal_data.grp -nt 1 -nct 8
     java -Xmx16g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -T PrintReads -R ${reffa} -I ${pair_id}.realigned.bam -BQSR ${pair_id}.recal_data.grp -o ${pair_id}.final.bam -nt 1 -nct 8
+
 elif [[ $algo == 'gatkbam' ]]
 then
-  samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
-  java -Xmx16g -jar $GATK_JAR -T RealignerTargetCreator -known ${knownindel} -R ${reffa} -o ${pair_id}.bam.list -I ${sbam} -nt 8 -nct 1
-  java -Xmx16g -jar $GATK_JAR -I ${sbam} -R ${reffa} --filter_mismatching_base_and_quals -T IndelRealigner -targetIntervals ${pair_id}.bam.list -o ${pair_id}.realigned.bam
-  java -Xmx16g -jar $GATK_JAR -l INFO -R ${reffa} --knownSites ${dbsnp} -I ${pair_id}.realigned.bam -T BaseRecalibrator -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov ContextCovariate -o ${pair_id}.recal_data.grp -nt 1 -nct 8
-  java -Xmx16g -jar $GATK_JAR -T PrintReads -R ${reffa} -I ${pair_id}.realigned.bam -BQSR ${pair_id}.recal_data.grp -o ${pair_id}.final.bam -nt 1 -nct 8
+    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" BaseRecalibrator -I ${i} --known-sites ${gatk4_dbsnp} -R ${reffa} -O ${prefix}.recal_data.table --use-original-qualities
+    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${i} -R ${reffa} -O ${prefix}.final.bam --use-original-qualities -bqsr ${prefix}.recal_data.table
+    samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
+
+elif [[ $algo == 'abra2' ]]
+then
+  module load abra2/2.18
+  mkdir tmpdir
+  java  -Xmx16G -jar /cm/shared/apps/abra2/lib/abra2.jar --in ${sbam}  --in-vcf /archive/PHG/PHG_Clinical/phg_workflow/analysis/awesomeproject/GoldIndels.vcf --out ${pair_id}.final.bam --ref ${reffa} --threads $SLURM_CPUS_ON_NODE --tmpdir tmpdir
+  samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 fi

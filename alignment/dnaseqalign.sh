@@ -12,7 +12,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:x:y:g:p:uh opt
+while getopts :r:x:y:g:p:a:uh opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -21,6 +21,7 @@ do
 	u) umi='umi';;
 	g) read_group=$OPTARG;;
         p) pair_id=$OPTARG;;
+	a) aligner=$OPTARG;;
         h) usage;;
     esac
 done
@@ -42,26 +43,35 @@ then
     read_group=$pair_id
 fi
 
+testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+
 source /etc/profile.d/modules.sh
-module load bwakit/0.7.15 bwa/intel/0.7.15 samtools/1.6 picard/2.10.3
+module load bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
 
 baseDir="`dirname \"$0\"`"
 
 diff $fq1 $fq2 > difffile
-
-if [ -s difffile ]
+if [[ $aligner == 'bwa' ]]
 then
-    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
-else
-    bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
+    module load bwa/intel/0.7.17
+    if [ -s difffile ]
+	then
+    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
+	else
+    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
+	fi
+elif [[ $aligner == 'hisat2' ]]
+then
+	module load hisat2/2.1.0-intel
+	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt		
 fi
 
 if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
 then
-    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
+    k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
 elif [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
 then
-    k8 /cm/shared/apps/bwakit/0.7.15/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
+    k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
 elif [[ $umi == 'umi' ]]
 then
     python ${baseDir}/add_umi_sam.py -s out.sam -o output.unsort.bam
