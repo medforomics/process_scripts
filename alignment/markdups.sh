@@ -67,4 +67,4 @@ then
 else
     cp ${sbam} ${pair_id}.dedup.bam    
 fi
-samtools index --threads $SLURM_CPUS_ON_NODE ${pair_id}.dedup.bam
+samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.dedup.bam

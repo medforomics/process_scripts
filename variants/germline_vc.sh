@@ -73,17 +73,15 @@ then
     vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
     bgzip ${pair_id}.sam.vcf
-    
 elif [[ $algo == 'freebayes' ]]
 then
-    module load freebayes/gcc/1.2.0
+    module load freebayes/gcc/1.2.0 parallel/20150122
     bamlist=''
     for i in *.bam; do
-    bamlist="$bamlist --bam ${i}"
+    bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    freebayes-parallel ${index_path}/genomefile.5M.txt $SLURM_CPUS_ON_NODE -f ${reffa} --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 --vcf fb.vcf $bamlist
-    vcf-annotate -n --fill-type fb.vcf| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
-
+    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
 elif [[ $algo == 'gatk' ]]
 then
     gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
@@ -103,7 +101,6 @@ then
     singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs $gvcflist -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
-
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
@@ -112,7 +109,6 @@ then
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
-
 elif [[ $algo == 'strelka2' ]]
 then
     if [[ $rna == 1 ]]

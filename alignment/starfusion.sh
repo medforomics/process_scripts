@@ -42,7 +42,7 @@ module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
 
 if [[ $method == 'trinity' ]]
 then
-    module load trinity/1.4.0
+    module load trinity/1.6.0
     tmphome="/tmp/$USER"
     if [[ -z $tmphome ]]
     then

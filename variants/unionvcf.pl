@@ -137,21 +137,26 @@ foreach $vcf (@vcffiles) {
   }
   close VCF;
 }
-my @callers = ('fb','gatk','platypus','mutect','strelka2','shimmer','strelka2','virmid','strelka2',);
+my @callers = ('fb','mutect','gatk','platypus','strelka2','shimmer','virmid');
 
 F1:foreach $chr (sort {$a cmp $b} keys %lines) {
  F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {
   F4:foreach $alt (sort {$a <=> $b} keys %{$lines{$chr}{$pos}}) {
       my @callset;
       my %csets;
+      my %depth;
     F3:foreach $caller (sort {$a cmp $b} keys %{$lines{$chr}{$pos}{$alt}}) {
 	my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,
 	    $format,$gtsref,$gtdescref) = @{$lines{$chr}{$pos}{$alt}{$caller}};
-	@gtdesc = @{$gtdescref};
+	my @gtdesc = @{$gtdescref};
+	my @gtdesc2;	
 	foreach $gtd (@gtdesc) {
 	  my ($id,$dp,$maf) = split(/:/,$gtd);
+	  push @gtdesc2, $dp;
 	  push @{$csets{$id}}, [$caller,$dp,$maf];
 	}
+	@gtdesc2 = sort {$b <=> $a} @gtdesc2;
+	$depth{$caller} = $gtdesc2[0];
 	push @callset, join("|",$caller,$alt,@gtdesc);
       }
       my $consistent = 1;
@@ -160,6 +165,7 @@ F1:foreach $chr (sort {$a cmp $b} keys %lines) {
 	my @calls = sort {$a[2] <=> $b[2]} @calls;
 	$consistent = 0 if ($calls[0][2] < 0.25 && $calls[-1][2] - $calls[0][2] > 0.10 && $calls[-1][2]/($calls[0][2]+0.001) > 3);
       }
+      @callorder = sort {$depth{$b} <=> $depth{$a}} keys %depth;
     F3:foreach $caller (@callers) {
 	if ($lines{$chr}{$pos}{$alt}{$caller}) {
 	  my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,

@@ -68,6 +68,9 @@ while (my $line = <CNR>) {
 		$genes{$value} = 1 if $keep{$value};
 	    }
 	}
+    }elsif ($geneids =~ m/:/) {
+	my ($gene,$chr,$pos) = split(/:/,$geneids);
+	$genes{$gene} = 1;
     }else {
 	my @ids = split(/,/,$geneids);
 	foreach my $gid (@ids) {
@@ -97,6 +100,9 @@ while (my $line = <IN>) {
 		$genes{$value} = 1 if $keep{$value};
 	    }
 	}
+    }elsif ($geneids =~ m/:/) {
+	my ($gene,$chr,$pos) = split(/:/,$geneids);
+	$genes{$gene} = 1;
     }else {
 	my @ids = split(/,/,$geneids);
 	foreach my $gid (@ids) {

@@ -38,7 +38,7 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
-if [[ $capture == '/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/UTSWV2.bed' ]]
+if [[ $capture == '${index_path}/UTSWV2.bed' ]]
 then 
     normals="${index_path}/UTSWV2.normals.cnn"
     targets="${index_path}/UTSWV2.cnvkit_"
@@ -46,17 +46,21 @@ then
     then
 	normals="${index_path}/UTSWV2.uminormals.cnn"
     fi
-elif [[ $capture == '/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
+elif [[ $capture == '${index_path}/UTSWV2_2.panelplus.bed' ]]
 then
     normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
     targets="${index_path}/panel1385V2-2.cnvkit_"
+elif [[ $capture == '${index_path}/hemepanelV3.bed' ]]
+then
+    normals="${index_path}/hemepanelV3.flatreference.cnn"
+    targets="${index_path}/hemepanelV3.cnvkit_"
 fi
 
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
 
 source /etc/profile.d/modules.sh
-module load cnvkit/0.9.0 bedtools/2.26.0
+module load cnvkit/0.9.5 bedtools/2.26.0
 unset DISPLAY
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn

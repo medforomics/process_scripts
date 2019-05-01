@@ -81,7 +81,7 @@ fi
 baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
-
+module load htslib/gcc/1.8
 
 if [ $algo == 'strelka2' ]
   then
@@ -102,26 +102,21 @@ if [ $algo == 'virmid' ]
     module rm java/oracle/jdk1.7.0_51
     module load snpeff/4.3q
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
-fi
-
-if [ $algo == 'mutect2' ]
+elif [ $algo == 'mutect2' ]
 then
-    gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
-    user=$USER
-    module load gatk/4.x singularity/2.6.1 picard/2.10.3
-    mkdir /tmp/${user}
-    export TMP_HOME=/tmp/${user}
-    java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics -I ${tumor} -O=artifact_metrics.txt -R ${reffa}
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" MuTect2 -R ${reffa} -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A StrandArtifact -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -A -TandemRepeat I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --cosmic ${cosmic} -o ${tid}.mutect.vcf
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" FilterByOrientationBias --artifactModes 'G/T' -V ${tid}.mutect.filt.vcf -P artifact_metrics.txt --output ${tid}.mutect.filt2.vcf
-    module load snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
-  vcf-concat ${tid}.mutect.filt2.vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.mutect.vcf.gz
-fi
-
-if [ $algo == 'varscan' ]
+  gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
+  user=$USER
+  module load gatk/4.x singularity/2.6.1 picard/2.10.3
+  mkdir /tmp/${user}
+  export TMP_HOME=/tmp/${user}
+  java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${tumor} O=artifact_metrics.txt R=${reffa}
+  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" Mutect2 -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
+  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
+  module load snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
+  vcf-sort ${tid}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+elif [ $algo == 'varscan' ]
 then
-  module load samtools/1.6 VarScan/2.4.2 vcftools/0.1.14
+  module load samtools/gcc/1.8 VarScan/2.4.2 vcftools/0.1.14
   module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
   samtools mpileup -C 50 -f ${reffa} $tumor > t.mpileup
@@ -129,11 +124,9 @@ then
   VarScan somatic n.mpileup t.mpileup vscan --output-vcf 1
   VarScan copynumber n.mpileup t.mpileup vscancnv
   vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
-fi
-
-if [ $algo == 'shimmer' ]
+elif [ $algo == 'shimmer' ]
 then
-    module load shimmer/0.1.1 samtools/1.6  vcftools/0.1.14
+    module load shimmer/0.1.1 samtools/gcc/1.8  vcftools/0.1.14
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
     perl $baseDir/add_readct_shimmer.pl
     module rm java/oracle/jdk1.7.0_51
