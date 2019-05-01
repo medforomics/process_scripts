@@ -94,6 +94,9 @@ foreach $file (@files) {
       $keepforvcf = $gene;
     }
     next unless $keepforvcf;
+    if ($tumormaf[0] < 0.1) {
+	next unless ($outfile =~ m/pindel_tandemdup/);
+    }
     my @fail = sort {$a cmp $b} keys %fail;
     next if (scalar(@fail) > 0);
     my @nannot;
