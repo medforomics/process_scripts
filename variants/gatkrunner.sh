@@ -58,7 +58,7 @@ fi
 
 source /etc/profile.d/modules.sh
 user=$USER
-module load gatk/4.x singularity/2.6.1
+module load gatk/4.x singularity/2.6.1 samtools/gcc/1.8
 mkdir /tmp/${user}
 export TMP_HOME=/tmp/${user}
 
