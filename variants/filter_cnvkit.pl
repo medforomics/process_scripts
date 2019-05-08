@@ -36,7 +36,8 @@ while (my $line = <CYTO>) {
     my ($chrom,$start,$end,$band) = split(/\t/,$line);
     my $key = $chrom.":".$start."-".$end;
     $band =~ m/^(\w)(.+)/;
-    push @{$cyto{$key}}, [$1,$2];
+    next unless ($1 && $2);
+    push @{$cyto{$key}{$1}},$2;
 }
 
 open OUT, ">$prefix\.cnvcalls.txt" or die $!;
@@ -115,16 +116,23 @@ while (my $line = <IN>) {
 	$cn_cbio = 2 if ($cn > 4);
 	print BIO join("\t",$gene,$entrez{$gene},$cn_cbio),"\n";
         print BIO2 join("\t",$gene,$entrez{$gene},$log2),"\n";
-	my @cytoband = sort {$a->[1] <=>$b->[1]} @{$cyto{$key}};
-	if (join("",@{$cytoband[0]}) eq join("",@{$cytoband[-1]})) {
-	    $cband = join("",@{$cytoband[0]});
+	my @cytoband;
+	if (@{$cyto{$key}{'p'}}) {
+	  @nums = sort {$b <=> $a} @{$cyto{$key}{'p'}};
+	  push @cytoband, 'p'.$nums[0],'p'.$nums[-1];
+	} if (@{$cyto{$key}{'q'}}) {
+	  @nums = sort {$a <=> $b} @{$cyto{$key}{'q'}};
+	  push @cytoband, 'q'.$nums[0],'q'.$nums[-1];
+	} 
+	if ($cytoband[0] eq $cytoband[-1]) {
+	  $cband = $cytoband[0];
 	}else {
-	    $cband = join("",@{$cytoband[0]},'-',@{$cytoband[-1]});
+	  $cband = join("-",$cytoband[0],$cytoband[-1]);
 	}
-	print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,$cband),"\n";
-	print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
-    }
-}
+	    print OUT2 join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight,$cband),"\n";
+	    print OUT join("\t",$gene,$chr,$start,$end,$abtype,$cn,$weight),"\n";
+	  }
+      }
 close IN;
 close OUT;
 close BIO;
