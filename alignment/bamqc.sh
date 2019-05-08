@@ -8,11 +8,12 @@ usage() {
   echo "-n  --NucType"
   echo "-p  --Prefix for output file name"
   echo "-c  --Capture Bedfile"
+  echo "-d  --RemoveDuplicates 1=yes, 0=no default=no"
   echo "Example: bash bamqc.sh -p prefix -r /project/shared/bicf_workflow_ref/human/GRCh38 -b SRR1551047.bam  -n dna -c target.bed"
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:b:c:n:p:h opt
+while getopts :r:b:c:n:p:d:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -20,6 +21,7 @@ do
         c) bed=$OPTARG;;
         n) nuctype=$OPTARG;;
         p) pair_id=$OPTARG;;
+	d) dedup=$OPTARG;;
         h) usage;;
     esac
 done
@@ -40,6 +42,12 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
+fi
+
+if [[ $dedup == 1 ]]
+then
+    mv $sbam ori.bam
+    samtools view -@ $SLURM_CPUS_ON_NODE -F 1024 -b -o ${sbam} ori.bam
 fi
 
 if [[ $nuctype == 'dna' ]]; then

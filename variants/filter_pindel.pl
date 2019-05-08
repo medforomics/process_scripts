@@ -80,6 +80,7 @@ foreach $file (@files) {
     next if ($tumoraltct[0] eq '.');
     $hash{AF} = join(",",@tumormaf);
     next if ($tumoraltct[0] < 20);
+    next if ($tumormaf[0] < 0.01);
     my $keepforvcf = 0;
     foreach $trx (split(/,/,$hash{ANN})) {
       my ($allele,$effect,$impact,$gene,$geneid,$feature,
