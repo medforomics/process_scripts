@@ -42,9 +42,6 @@ then
     sambamba markdup -t $SLURM_CPUS_ON_NODE ${sbam} ${pair_id}.dedup.bam
 elif [ $algo == 'samtools' ]
 then
-    samtools sort -n -@ $SLURM_CPUS_ON_NODE -o nsort.bam ${sbam}
-    samtools fixmate -c --output-fmt BAM -m -@ $SLURM_CPUS_ON_NODE nsort.bam fix.bam
-    samtools sort -n -@ $SLURM_CPUS_ON_NODE -o sort.bam fix.bam
     samtools markdup -s --output-fmt BAM -@ $SLURM_CPUS_ON_NODE sort.bam ${pair_id}.dedup.bam
 elif [ $algo == 'picard' ]
 then
