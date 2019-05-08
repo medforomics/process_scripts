@@ -33,21 +33,21 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-if [[ -a "${index_path}/dbSnp.vcf.gz" ]]
+if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
 then
     dbsnp="${index_path}/dbSnp.vcf.gz"
 else 
     echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/GoldIndels.vcf.gz" ]]
+if [[ -s "${index_path}/GoldIndels.vcf.gz" ]]
 then
     knownindel="${index_path}/GoldIndels.vcf.gz"
 else 
     echo "Missing InDel File: ${index_path}/GoldIndels.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/genome.fa" ]]
+if [[ -s "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
     dict="${index_path}/genome.dict"
@@ -87,7 +87,10 @@ then
     gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
     user=$USER
     module load gatk/4.x singularity/2.6.1
-    mkdir /tmp/${user}
+    if [[ ! -e "/tmp/${user}" ]]
+    then
+	mkdir /tmp/${user}
+    fi
     export TMP_HOME=/tmp/${user}
     gvcflist=''
     for i in *.bam; do
@@ -98,7 +101,9 @@ then
 	
 	gvcflist="$gvcflist --variant ${prefix}.gatk.g.vcf"
     done
-    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs $gvcflist -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
+    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' |paste -sd "," -`
+    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb --intervals $interval
+    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]

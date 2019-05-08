@@ -125,10 +125,10 @@ foreach $vcf (@vcffiles) {
     my @filts = split(";",$filter);
     my %filterqc = map {$_ => 1} @filts;
     delete $filterqc{'.'};
-    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60) || 
-	($hash{SAP} && $hash{SAP} > 20)) {
+    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60)) { # ||($hash{SAP} && $hash{SAP} > 20)) {
 	$filterqc{strandBias} = 1;
-    }if (scalar(keys %filterqc) > 1) {
+	$annot .= ';strandBias=1';
+    }if (scalar(keys %filterqc) > 0) {
 	$filter = join(";",keys %filterqc);
     }else {
 	$filter = '.';

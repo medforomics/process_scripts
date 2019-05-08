@@ -30,4 +30,5 @@ perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
 bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
-bcftools norm -m - -O z -o ${pair_id}.norm.vcf.gz $j
+bcftools norm -m - -O v $j  | /project/shared/bicf_workflow_ref/seqprg/vt/vt decompose_blocksub - -a -o ${pair_id}.norm.vcf
+bgzip -f ${pair_id}.norm.vcf
