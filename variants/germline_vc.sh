@@ -102,8 +102,8 @@ then
 	gvcflist="$gvcflist --variant ${prefix}.gatk.g.vcf"
     done
     interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' |paste -sd "," -`
-    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb --intervals $interval
-    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
+    #singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb --intervals $interval
+    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs $gvcflist -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
