@@ -57,11 +57,7 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-user=$USER
-module load gatk/4.x singularity/2.6.1 samtools/gcc/1.8
-mkdir /tmp/${user}
-export TMP_HOME=/tmp/${user}
-
+module load gatk/4.2.1.0 samtools/gcc/1.8
 samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
 
 if [[ $algo == 'gatkbam_rna' ]]
@@ -71,14 +67,14 @@ then
     java -Xmx4g -jar $PICARD/picard.jar ReorderSam I=${pair_id}.clean.bam O=${pair_id}.sort.bam R=${reffa} CREATE_INDEX=TRUE 
     java -Xmx4g -jar $PICARD/picard.jar AddOrReplaceReadGroups INPUT=${pair_id}.clean.bam O=${pair_id}.rg_added_sorted.bam SO=coordinate RGID=${pair_id} RGLB=tx RGPL=illumina RGPU=barcode RGSM=${pair_id}
     samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.rg_added_sorted.bam
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk SplitNCigarReads -R ${reffa} -I ${pair_id}.rg_added_sorted.bam -O ${pair_id}.split.bam
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" BaseRecalibrator -I ${pair_id}.split.bam --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${pair_id}.split.bam -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+    gatk SplitNCigarReads -R ${reffa} -I ${pair_id}.rg_added_sorted.bam -O ${pair_id}.split.bam
+    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${pair_id}.split.bam --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+    gatk --java-options "-Xmx32g" ApplyBQSR -I ${pair_id}.split.bam -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
     samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 elif [[ $algo == 'gatkbam' ]]
 then
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
-    singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+    gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
     samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 
 elif [[ $algo == 'abra2' ]]

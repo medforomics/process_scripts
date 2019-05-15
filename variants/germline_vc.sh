@@ -86,24 +86,19 @@ elif [[ $algo == 'gatk' ]]
 then
     gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
     user=$USER
-    module load gatk/4.x singularity/2.6.1
-    if [[ ! -e "/tmp/${user}" ]]
-    then
-	mkdir /tmp/${user}
-    fi
-    export TMP_HOME=/tmp/${user}
+    module load gatk/4.1.2.0
     gvcflist=''
     for i in *.bam; do
 	prefix="${i%.bam}"
 	echo ${prefix}
-	singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth  -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -O haplotypecaller.vcf.gz
+	gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth  -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -O haplotypecaller.vcf.gz
 	java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf.gz O=${prefix}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
 	
-	gvcflist="$gvcflist --variant ${prefix}.gatk.g.vcf"
+	gvcflist="$gvcflist -V ${prefix}.gatk.g.vcf"
     done
-    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' |paste -sd "," -`
-    #singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb --intervals $interval
-    singularity exec -H /tmp/$user /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx32g" GenotypeGVCFs $gvcflist -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
+    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+    gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb -L $interval
+    gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
