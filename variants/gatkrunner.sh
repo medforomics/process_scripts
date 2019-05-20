@@ -57,7 +57,7 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load gatk/4.2.1.0 samtools/gcc/1.8
+module load gatk/4.1.2.0 samtools/gcc/1.8
 samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
 
 if [[ $algo == 'gatkbam_rna' ]]

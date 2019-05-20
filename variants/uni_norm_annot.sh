@@ -15,6 +15,7 @@ do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
+	
 	v) vcf=$OPTARG;;
         h) usage;;
     esac
