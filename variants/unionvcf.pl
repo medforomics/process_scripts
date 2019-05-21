@@ -3,6 +3,8 @@
 
 my $headerfile = shift @ARGV;
 my @vcffiles = @ARGV;
+my @callers = ('fb','mutect','gatk','platypus','strelka2','shimmer','virmid');
+%algos = map {$_=>1} @callers;
 
 open HEADER, "<$headerfile" or die $!;
 open OUT, ">int.vcf" or die $!;
@@ -15,7 +17,11 @@ my @sampleorder;
 
 my %headerlines;
 foreach $vcf (@vcffiles) {
-  $caller = (split(/\./,$vcf))[-3];
+  my @filename = (split(/\./,$vcf));
+  my $caller;
+  foreach $fio (@filename) {
+    $caller = $fio if ($algos{$fio});
+  }
   open VCF, "gunzip -c $vcf|" or die $!;
   my @sampleids;
   while (my $line = <VCF>) {
@@ -125,19 +131,18 @@ foreach $vcf (@vcffiles) {
     my @filts = split(";",$filter);
     my %filterqc = map {$_ => 1} @filts;
     delete $filterqc{'.'};
-    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60) || 
-	($hash{SAP} && $hash{SAP} > 20)) {
+    if ($gtfilt{'StrandBias'} || ($hash{FS} && $hash{FS} > 60)) { # ||($hash{SAP} && $hash{SAP} > 20)) {
 	$filterqc{strandBias} = 1;
-    }if (scalar(keys %filterqc) > 1) {
+	$annot .= ';strandBias=1';
+    }if (scalar(keys %filterqc) > 0) {
 	$filter = join(";",keys %filterqc);
     }else {
 	$filter = '.';
     }
-    $lines{$chrom}{$pos}{$ref}{$alt}{$caller} = [$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,\@newgts,\@gtdesc];
+    $lines{$chrom}{$pos}{$ref}{$alt}{$caller} = [$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,\@newgts,\@gtdesc] unless $lines{$chrom}{$pos}{$ref}{$alt}{$caller};
   }
   close VCF;
 }
-my @callers = ('fb','mutect','gatk','platypus','strelka2','shimmer','virmid');
 
 F1:foreach $chr (sort {$a cmp $b} keys %lines) {
  F2:foreach $pos (sort {$a <=> $b} keys %{$lines{$chr}}) {

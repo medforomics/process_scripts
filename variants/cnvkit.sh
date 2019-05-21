@@ -26,7 +26,7 @@ done
 
 shift $(($OPTIND -1))
 
-index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/'
+index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj'
 
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
@@ -38,7 +38,7 @@ then
 fi
 baseDir="`dirname \"$0\"`"
 
-if [[ $capture == '${index_path}/UTSWV2.bed' ]]
+if [[ $capture == "${index_path}/UTSWV2.bed" ]]
 then 
     normals="${index_path}/UTSWV2.normals.cnn"
     targets="${index_path}/UTSWV2.cnvkit_"
@@ -46,11 +46,11 @@ then
     then
 	normals="${index_path}/UTSWV2.uminormals.cnn"
     fi
-elif [[ $capture == '${index_path}/UTSWV2_2.panelplus.bed' ]]
+elif [[ $capture == "${index_path}/UTSWV2_2.panelplus.bed" ]]
 then
     normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
     targets="${index_path}/panel1385V2-2.cnvkit_"
-elif [[ $capture == '${index_path}/hemepanelV3.bed' ]]
+elif [[ $capture == "${index_path}/hemepanelV3.bed" ]]
 then
     normals="${index_path}/hemepanelV3.flatreference.cnn"
     targets="${index_path}/hemepanelV3.cnvkit_"

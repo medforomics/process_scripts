@@ -33,21 +33,21 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-if [[ -a "${index_path}/dbSnp.vcf.gz" ]]
+if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
 then
     dbsnp="${index_path}/dbSnp.vcf.gz"
 else 
     echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/GoldIndels.vcf.gz" ]]
+if [[ -s "${index_path}/GoldIndels.vcf.gz" ]]
 then
     knownindel="${index_path}/GoldIndels.vcf.gz"
 else 
     echo "Missing InDel File: ${index_path}/GoldIndels.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/genome.fa" ]]
+if [[ -s "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
     dict="${index_path}/genome.dict"
