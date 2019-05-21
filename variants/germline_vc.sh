@@ -124,8 +124,8 @@ then
 	gvcflist="$gvcflist --bam ${i}"
     done
     configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
-    manta/runWorkflow.py -m local -j 8
+    manta/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
     configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
-    strelka/runWorkflow.py -m local -j 8
+    strelka/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi
