@@ -70,8 +70,6 @@ else
 	samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
     fi
     samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -o ${pair_id}.bam output.bam
-    java -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.nsort.bam O=${pair_id}.bam
-
 fi
 
 samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
