@@ -46,7 +46,7 @@ fi
 testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
 
 source /etc/profile.d/modules.sh
-module load bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
+module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
 
 baseDir="`dirname \"$0\"`"
 
