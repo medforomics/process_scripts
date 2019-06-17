@@ -58,7 +58,8 @@ fi
 
 source /etc/profile.d/modules.sh
 module load gatk/4.1.2.0 samtools/gcc/1.8
-samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
+which samtools
+/cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
 
 if [[ $algo == 'gatkbam_rna' ]]
 then
@@ -70,12 +71,12 @@ then
     gatk SplitNCigarReads -R ${reffa} -I ${pair_id}.rg_added_sorted.bam -O ${pair_id}.split.bam
     gatk --java-options "-Xmx32g" BaseRecalibrator -I ${pair_id}.split.bam --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
     gatk --java-options "-Xmx32g" ApplyBQSR -I ${pair_id}.split.bam -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
-    samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
+    /cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 elif [[ $algo == 'gatkbam' ]]
 then
     gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
     gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
-    samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
+    /cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 
 elif [[ $algo == 'abra2' ]]
 then

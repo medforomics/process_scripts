@@ -84,7 +84,7 @@ then
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
 elif [[ $algo == 'gatk' ]]
 then
-    gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
+    gatk4_dbsnp=/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/dbSnp.gatk4.vcf.gz
     user=$USER
     module load gatk/4.1.2.0
     gvcflist=''

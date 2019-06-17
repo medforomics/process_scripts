@@ -52,7 +52,7 @@ then
     targets="${index_path}/panel1385V2-2.cnvkit_"
 elif [[ $capture == "${index_path}/hemepanelV3.bed" ]]
 then
-    normals="${index_path}/hemepanelV3.flatreference.cnn"
+    normals="${index_path}/hemepanelV3.panelofnormals.cnn"
     targets="${index_path}/hemepanelV3.cnvkit_"
 fi
 
