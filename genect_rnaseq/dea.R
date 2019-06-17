@@ -25,7 +25,7 @@ genenames <- read.table(file="genenames.txt",header=TRUE,sep='\t')
 
 tbl <- read.table('countTable.txt',header=TRUE,sep="\t")
 tbl2 <- read.table('countTable.logCPM.txt',header=TRUE,sep="\t")
-ct <- tbl[,4:length(tbl)]
+ct <- round(tbl[,4:length(tbl)],0)
 row.names(ct) <- tbl$ENSEMBL
 
 samples<- names(ct)
