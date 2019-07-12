@@ -22,7 +22,7 @@ do
         n) nuctype=$OPTARG;;
         p) pair_id=$OPTARG;;
 	d) dedup=$OPTARG;;
-	s) skiplc=1;
+	s) skiplc=1;;
         h) usage;;
     esac
 done
