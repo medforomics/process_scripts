@@ -43,26 +43,12 @@ then
 fi
 if [[ -z $normals ]] || [[ -z $targets ]]
 then
-    if [[ $capture == "${index_path}/UTSWV2.bed" ]]
-    then 
-	normals="${index_path}/UTSWV2.normals.cnn"
-	targets="${index_path}/UTSWV2.cnvkit_"
-	if [[ $umi == 'umi' ]]
-	then
-	    normals="${index_path}/UTSWV2.uminormals.cnn"
-	fi
-    elif [[ $capture == "${index_path}/UTSWV2_2.panelplus.bed" ]]
-    then
-	normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
-	targets="${index_path}/panel1385V2-2.cnvkit_"
-    elif [[ $capture == "${index_path}/hemepanelV3.bed" ]]
-    then
-	normals="${index_path}/hemepanelV3.panelofnormals.cnn"
-	targets="${index_path}/hemepanelV3.cnvkit_"
-    fi
+    usage
 fi
+
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
+echo "${normals}"
 
 source /etc/profile.d/modules.sh
 module load cnvkit/0.9.5 bedtools/2.26.0
