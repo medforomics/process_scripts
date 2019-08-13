@@ -11,12 +11,13 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:t:c:uh opt
+while getopts :b:p:n:f:t:c:uh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
         p) pair_id=$OPTARG;;
 	n) normals=$OPTARG;;
+	r) index_path=$OPTARG;;
 	t) targets=$OPTARG;;
 	c) capture=$OPTARG;;
 	u) umi='umi';;
@@ -25,37 +26,41 @@ do
 done
 
 shift $(($OPTIND -1))
+baseDir="`dirname \"$0\"`"
 
-index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj'
-
+if [[ -z $index_path ]] 
+then
+    index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj'
+fi
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
+if [[ -z $pair_id ]] || [[ -z $sbam ]]
+then
     usage
 fi
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-baseDir="`dirname \"$0\"`"
-
-if [[ $capture == "${index_path}/UTSWV2.bed" ]]
-then 
-    normals="${index_path}/UTSWV2.normals.cnn"
-    targets="${index_path}/UTSWV2.cnvkit_"
-    if [[ $umi == 'umi' ]]
+if [[ -z $normals ]] || [[ -z $targets ]]
+then
+    if [[ $capture == "${index_path}/UTSWV2.bed" ]]
+    then 
+	normals="${index_path}/UTSWV2.normals.cnn"
+	targets="${index_path}/UTSWV2.cnvkit_"
+	if [[ $umi == 'umi' ]]
+	then
+	    normals="${index_path}/UTSWV2.uminormals.cnn"
+	fi
+    elif [[ $capture == "${index_path}/UTSWV2_2.panelplus.bed" ]]
     then
-	normals="${index_path}/UTSWV2.uminormals.cnn"
+	normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
+	targets="${index_path}/panel1385V2-2.cnvkit_"
+    elif [[ $capture == "${index_path}/hemepanelV3.bed" ]]
+    then
+	normals="${index_path}/hemepanelV3.panelofnormals.cnn"
+	targets="${index_path}/hemepanelV3.cnvkit_"
     fi
-elif [[ $capture == "${index_path}/UTSWV2_2.panelplus.bed" ]]
-then
-    normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
-    targets="${index_path}/panel1385V2-2.cnvkit_"
-elif [[ $capture == "${index_path}/hemepanelV3.bed" ]]
-then
-    normals="${index_path}/hemepanelV3.panelofnormals.cnn"
-    targets="${index_path}/hemepanelV3.cnvkit_"
 fi
-
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
 
