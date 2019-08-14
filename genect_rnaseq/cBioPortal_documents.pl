@@ -6,15 +6,17 @@ use File::Basename;
 
 my $results= GetOptions (\%opt,'fpkm|f=s','logcpm|l=s','cnv|c=s','prefix|p=s','help|h');
 
-open ENT_ENS, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
+open ENT_GENE, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
 my %entrez;
-my $ent_header = <ENT_ENS>;
-while (my $line = <ENT_ENS>){
+my %entgene;
+my $ent_header = <ENT_GENE>;
+while (my $line = <ENT_GENE>){
   chomp $line;
   my @row = split(/\t/, $line);
-  $entrez{$row[2]}=$row[1];
+  $entgene{$row[6]}{$row[2]}=$row[1];
+  #$entrez{$row[2]}=$row[1];
 }
-close ENT_ENS;
+close ENT_GENE;
 open ENT_ENS, "</project/shared/bicf_workflow_ref/human/GRCh38/genenames.txt" or die $!;
 my $gn_header = <ENT_ENS>;
 my %ensym;
@@ -41,12 +43,14 @@ if($opt{fpkm}){
   my $fpkm_header = <FPKM>;
   while(my $line = <FPKM>){
     chomp $line;
-    my ($id,$gene,$ref,$strand,$start,$end,$coverage,$fpkm,$tpm) = split(/\t/,$line);
+	my $entrezid=0;
+    my ($id,$gene,$chr,$strand,$start,$end,$coverage,$fpkm,$tpm) = split(/\t/,$line);
+	$chr =~ s/^chr//g;
     my $ensembl = (split(/\./,$id))[0];
     if ($entrez{$ensembl}) {
       $entrezid = $entrez{$ensembl};
-    }else {
-      $entrezid = $entrez{$gene};
+    }elsif($entgene{$chr}{$gene}){
+      $entrezid = $entgene{$chr}{$gene};
     }
     next unless ($entrezid);
     print OUTF join("\t",$entrezid,$fpkm),"\n"; 
@@ -68,19 +72,24 @@ if($opt{logcpm}){
     chomp($line);
     my @row = split(/\t/,$line);
     my $gene = $row[0];
+	my $chrom = (split(";",$row[1]))[0];
+	$chrom =~ s/^chr//g;
     my $ct = $row[-1];
     next if($gene =~ m/^__/);
-    $cts{$gene}{$sample} = $ct;
+    $cts{$chrom}{$gene} = $ct;
     $total += $ct;
   }
+	print $total."\n";
   close IN;
-  foreach $ens (keys %cts) {
-    next unless $entrez{$ens};
-    unless ($cts{$ens}) {
-      $cts{$ens} = 0;
-    }
-    $cpm = ($cts{$ens}/$total)*1e6;
-    print OUTL join("\t",$entrez{$ens},sprintf("%.2f",log2($cpm))),"\n";
+  foreach my $ens_chr (keys %cts) {
+	foreach my $ens (keys $cts{$ens_chr}){
+    	next unless $entgene{$ens_chr}{$ens};#($entrez{$ens} or $entgene{$gene}{$chrom});
+    	#unless ($cts{$ens_chr}{$ens}){
+    	#  $cts{$ens_chr}{$ens} = 0;
+    	#}
+    	$cpm = ($cts{$ens_chr}{$ens}/$total)*1e6;
+    	print OUTL join("\t",$entgene{$ens_chr}{$ens},sprintf("%.2f",log2($cpm))),"\n";
+	}
   }
   close OUTL;
 }

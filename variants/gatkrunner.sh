@@ -57,8 +57,9 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load gatk/3.8 samtools/1.6
-samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
+module load gatk/4.1.2.0 samtools/gcc/1.8
+which samtools
+/cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
 
 if [[ $algo == 'gatkbam_rna' ]]
 then
@@ -66,17 +67,21 @@ then
     java -Xmx4g -jar $PICARD/picard.jar CleanSam INPUT=${sbam} OUTPUT=${pair_id}.clean.bam
     java -Xmx4g -jar $PICARD/picard.jar ReorderSam I=${pair_id}.clean.bam O=${pair_id}.sort.bam R=${reffa} CREATE_INDEX=TRUE 
     java -Xmx4g -jar $PICARD/picard.jar AddOrReplaceReadGroups INPUT=${pair_id}.clean.bam O=${pair_id}.rg_added_sorted.bam SO=coordinate RGID=${pair_id} RGLB=tx RGPL=illumina RGPU=barcode RGSM=${pair_id}
-    samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.clean.bam
-    java -Xmx4g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -T SplitNCigarReads -R ${reffa} -I ${pair_id}.sort.bam -o ${pair_id}.split.bam -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 -U ALLOW_N_CIGAR_READS
-    java -Xmx32g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -T RealignerTargetCreator -known ${knownindel} -R ${reffa} -o ${pair_id}.bam.list -I ${pair_id}.split.bam -nt 8 -nct 1
-    java -Xmx16g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -I ${pair_id}.split.bam -R ${reffa} --filter_mismatching_base_and_quals -T IndelRealigner -targetIntervals ${pair_id}.bam.list -o ${pair_id}.realigned.bam
-    java -Xmx16g -jar $GATK_JAR -l INFO -R ${reffa} --knownSites ${dbsnp} -I ${pair_id}.realigned.bam -T BaseRecalibrator -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov ContextCovariate -o ${pair_id}.recal_data.grp -nt 1 -nct 8
-    java -Xmx16g -jar $GATK_JAR -L ${index_path}/../gatk_regions.list -T PrintReads -R ${reffa} -I ${pair_id}.realigned.bam -BQSR ${pair_id}.recal_data.grp -o ${pair_id}.final.bam -nt 1 -nct 8
+    samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.rg_added_sorted.bam
+    gatk SplitNCigarReads -R ${reffa} -I ${pair_id}.rg_added_sorted.bam -O ${pair_id}.split.bam
+    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${pair_id}.split.bam --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+    gatk --java-options "-Xmx32g" ApplyBQSR -I ${pair_id}.split.bam -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+    /cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 elif [[ $algo == 'gatkbam' ]]
 then
-  samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
-  java -Xmx16g -jar $GATK_JAR -T RealignerTargetCreator -known ${knownindel} -R ${reffa} -o ${pair_id}.bam.list -I ${sbam} -nt 8 -nct 1
-  java -Xmx16g -jar $GATK_JAR -I ${sbam} -R ${reffa} --filter_mismatching_base_and_quals -T IndelRealigner -targetIntervals ${pair_id}.bam.list -o ${pair_id}.realigned.bam
-  java -Xmx16g -jar $GATK_JAR -l INFO -R ${reffa} --knownSites ${dbsnp} -I ${pair_id}.realigned.bam -T BaseRecalibrator -cov ReadGroupCovariate -cov QualityScoreCovariate -cov CycleCovariate -cov ContextCovariate -o ${pair_id}.recal_data.grp -nt 1 -nct 8
-  java -Xmx16g -jar $GATK_JAR -T PrintReads -R ${reffa} -I ${pair_id}.realigned.bam -BQSR ${pair_id}.recal_data.grp -o ${pair_id}.final.bam -nt 1 -nct 8
+    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+    gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+    /cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
+
+elif [[ $algo == 'abra2' ]]
+then
+  module load abra2/2.18
+  mkdir tmpdir
+  java  -Xmx16G -jar /cm/shared/apps/abra2/lib/abra2.jar --in ${sbam}  --in-vcf /archive/PHG/PHG_Clinical/phg_workflow/analysis/awesomeproject/GoldIndels.vcf --out ${pair_id}.final.bam --ref ${reffa} --threads $SLURM_CPUS_ON_NODE --tmpdir tmpdir
+  samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.final.bam
 fi

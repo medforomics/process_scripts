@@ -15,6 +15,7 @@ do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
+	
 	v) vcf=$OPTARG;;
         h) usage;;
     esac
@@ -27,7 +28,11 @@ source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
 
 perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
+mv ${vcf} ${pair_id}.ori.vcf.gz
 bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
 bcftools norm -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+bash $baseDir/annotvcf.sh -p ${pair_id} -r $index_path -v ${pair_id}.norm.vcf.gz
+/project/shared/bicf_workflow_ref/seqprg/vt/vt decompose_blocksub ${pair_id}.annot.vcf.gz -p -a -o ${pair_id}.vcf
+bgzip -f ${pair_id}.vcf

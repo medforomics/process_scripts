@@ -25,7 +25,7 @@ genenames <- read.table(file="genenames.txt",header=TRUE,sep='\t')
 
 tbl <- read.table('countTable.txt',header=TRUE,sep="\t")
 tbl2 <- read.table('countTable.logCPM.txt',header=TRUE,sep="\t")
-ct <- tbl[,4:length(tbl)]
+ct <- round(tbl[,4:length(tbl)],0)
 row.names(ct) <- tbl$ENSEMBL
 
 samples<- names(ct)
@@ -106,8 +106,9 @@ for (i in 1:a) {
       	 if (textscale < 0.1) {
             textscale <- 0.1
       	 }
+         zscores2 = as.matrix(zscores[rowSums(!is.na(zscores))!=0, colSums(!is.na(zscores))!=0])
       	 png(file=paste(cond[i],'_',cond[j],'.heatmap.deseq2.png',sep=""),height=768,width=1024)
-      	 heatmap.2(zscores, col = bluered(100),Rowv = as.dendrogram(STREE), RowSideColors = col.blocks,dendrogram='row', cexCol=textscale,labCol=s$symbol,srtRow=45,srtCol=45,trace="none", margins=c(5, 5))
+      	 heatmap.2(zscores2, col = bluered(100),Rowv = as.dendrogram(STREE), RowSideColors = col.blocks,dendrogram='row', cexCol=textscale,labCol=s$symbol,srtRow=45,srtCol=45,trace="none", margins=c(5, 5))
       	 legend("topright",legend=grpnames,col=rainbow(length(grpnames)),pch=20,cex=0.5)
       	 dev.off()
       }
@@ -160,8 +161,9 @@ for (i in 1:a) {
       if (textscale < 0.1) {
         textscale <- 0.1
       }
+      zscores2 = as.matrix(zscores[rowSums(!is.na(zscores))!=0, colSums(!is.na(zscores))!=0])
       png(file=paste(cond[i],'_',cond[j],'.heatmap.edgeR.png',sep=""),height=768,width=1024)
-      heatmap.2(zscores, col = bluered(100),Rowv = as.dendrogram(STREE), RowSideColors = col.blocks,dendrogram='row', cexCol=textscale,labCol=s$symbol,srtRow=45,srtCol=45,trace="none", margins=c(5, 5))
+      heatmap.2(zscores2, col = bluered(100),Rowv = as.dendrogram(STREE), RowSideColors = col.blocks,dendrogram='row', cexCol=textscale,labCol=s$symbol,srtRow=45,srtCol=45,trace="none", margins=c(5, 5))
       legend("topright",legend=grpnames,col=rainbow(length(grpnames)),pch=20,cex=0.5)
       dev.off()
       gcont <- paste(cond[j],cond[i],sep='-')

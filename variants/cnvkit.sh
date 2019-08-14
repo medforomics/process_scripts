@@ -11,12 +11,13 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:t:c:uh opt
+while getopts :b:p:n:f:t:c:uh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
         p) pair_id=$OPTARG;;
 	n) normals=$OPTARG;;
+	r) index_path=$OPTARG;;
 	t) targets=$OPTARG;;
 	c) capture=$OPTARG;;
 	u) umi='umi';;
@@ -25,38 +26,32 @@ do
 done
 
 shift $(($OPTIND -1))
+baseDir="`dirname \"$0\"`"
 
-index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/'
-
+if [[ -z $index_path ]] 
+then
+    index_path='/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj'
+fi
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
+if [[ -z $pair_id ]] || [[ -z $sbam ]]
+then
     usage
 fi
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-baseDir="`dirname \"$0\"`"
-
-if [[ $capture == '/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/UTSWV2.bed' ]]
-then 
-    normals="${index_path}/UTSWV2.normals.cnn"
-    targets="${index_path}/UTSWV2.cnvkit_"
-    if [[ $umi == 'umi' ]]
-    then
-	normals="${index_path}/UTSWV2.uminormals.cnn"
-    fi
-elif [[ $capture == '/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/UTSWV2_2.panelplus.bed' ]]
+if [[ -z $normals ]] || [[ -z $targets ]]
 then
-    normals="${index_path}/panelofnormals.panel1385V2_2.cnn"
-    targets="${index_path}/panel1385V2-2.cnvkit_"
+    usage
 fi
 
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
+echo "${normals}"
 
 source /etc/profile.d/modules.sh
-module load cnvkit/0.9.0 bedtools/2.26.0
+module load cnvkit/0.9.5 bedtools/2.26.0
 unset DISPLAY
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn

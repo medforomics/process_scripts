@@ -14,12 +14,14 @@ while (my $line = <ENT>) {
       $entrez{$row[2]} = $row[1];
   }
 }
+
 open OM, "</project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/utswv2_known_genefusions.txt" or die $!;
 while (my $line = <OM>) {
     chomp($line);
     $known{$line} = 1;
 }
 close OM;
+
 open OM, "</project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/panel1410.genelist.txt" or die $!;
 while (my $line = <OM>) {
     chomp($line);
@@ -43,20 +45,24 @@ foreach $efile (@exonfiles) {
 	    push @rightexons, $exonnum;
 	}
     }
-    $exonnuminfo{$dir}{leftgene} = join("-",$leftexons[0],$leftexons[-1]);
-    $exonnuminfo{$dir}{rightgene} = join("-",$rightexons[0],$rightexons[-1]);
+    if ($leftexons[0] eq  $leftexons[-1]) {
+	$exonnuminfo{$dir}{leftgene} = $leftexons[0];
+    }else {
+	$exonnuminfo{$dir}{leftgene} = join("-",$leftexons[0],$leftexons[-1]);
+    }
+    if ($rightexons[0] eq  $rightexons[-1]) {
+	$exonnuminfo{$dir}{rightgene} = $rightexons[0];
+    }else {
+	$exonnuminfo{$dir}{rightgene} = join("-",$rightexons[0],$rightexons[-1]);
+    }
 }
 
-open OUT, ">$opt{prefix}\.translocations.txt" or die $!;
 open OAS, ">$opt{prefix}\.translocations.answer.txt" or die $!;
 open OUTIR, ">$opt{prefix}\.cbioportal.genefusions.txt" or die $!;
 
-print OUT join("\t","FusionName","LeftGene","RightGene","LefttBreakpoint",
-	       "RightBreakpoint","LeftStrand","RightStrand","RNAReads",
-	       "DNAReads"),"\n";
 print OAS join("\t","FusionName","LeftGene","LefttBreakpoint","LeftGeneExons","LeftStrand",
 	       "RightGene","RightBreakpoint","RightGeneExons","RightStrand",
-	       "RNAReads","DNAReads","FusionType","Annot"),"\n";
+	       "RNAReads","DNAReads","FusionType","Annot",'Filter','ChrType','ChrDistance'),"\n";
 
 print OUTIR join("\t","Hugo_Symbol","Entrez_Gene_Id","Center","Tumor_Sample_Barcode",
                "Fusion","DNA_support","RNA_support","Method","Frame"),"\n";
@@ -75,6 +81,7 @@ while (my $line = <FUSION>) {
   foreach my $i (0..$#row) {
     $hash{$hline[$i]} = $row[$i];
   }
+  my @filter;
   my ($left_chr,$left_pos,$left_strand) = split(/:/,$hash{LeftBreakpoint});
   my ($right_chr,$right_pos,$right_strand) = split(/:/,$hash{RightBreakpoint});
   $hash{LeftBreakpoint} = join(":",$left_chr,$left_pos);
@@ -83,7 +90,9 @@ while (my $line = <FUSION>) {
   $hash{RightStrand} = $right_strand;
   $hash{LeftGene} = (split(/\^/,$hash{LeftGene}))[0];
   $hash{RightGene} = (split(/\^/,$hash{RightGene}))[0];
-  next unless ($keep{$hash{LeftGene}} || $keep{$hash{RightGene}});
+  unless ($keep{$hash{LeftGene}} || $keep{$hash{RightGene}}) {
+      push @filter, 'OutsideGeneList';
+  }
   $hash{SumRNAReads} += $hash{JunctionReadCount}+$hash{SpanningFragCount};
   my $fname = join("--",$hash{LeftGene},$hash{RightGene});
   my $fname2 = join("--",sort {$a cmp $b} $hash{LeftGene},$hash{RightGene});
@@ -95,20 +104,40 @@ while (my $line = <FUSION>) {
   }
   $hash{PROT_FUSION_TYPE} = 'in-frame' if ($hash{PROT_FUSION_TYPE} eq 'INFRAME');
   my ($dna_support,$rna_support)=("no") x 2;
-  if ($known{$fname2} && ($hash{SumRNAReads} >= 3)|| ($hash{SumRNAReads} >= 5)) {
-    $rna_support = "yes";
-    print OUT join("\t",$fname,$hash{LeftGene},$hash{RightGene},
-		   $hash{LeftBreakpoint},$hash{RightBreakpoint},$hash{LeftStrand},
-		   $hash{RightStrand},$hash{SumRNAReads},0),"\n";
-    print OAS join("\t",$fname,$hash{LeftGene},$hash{LeftBreakpoint},$leftexon,$hash{LeftStrand},
-		   $hash{RightGene},$hash{RightBreakpoint},$rightexon,$hash{RightStrand},
-		   $hash{SumRNAReads},0,lc($hash{PROT_FUSION_TYPE}),$hash{annots}),"\n";
-    print OUTIR join("\t",$hash{LeftGene},$entrez{$hash{LeftGene}},"UTSW",$sname,$fname." fusion",
-		     $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
-    print OUTIR join("\t",$hash{RightGene},$entrez{$hash{RightGene}},"UTSW",$sname,$fname." fusion",
-                     $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
+  $hash{annots} =~ s/CHROMOSOMAL\[/CHROMOSOMAL /;
+  $hash{annots} =~ s/\]|\[|\"//g;
+  @annots = split(/,/,$hash{annots});
+  my ($chrom_type_dist) = grep(/CHROMOSOMAL/,@annots);
+  my ($chrtype,$chrdist) = split(/ /,$chrom_type_dist);
+  @annot2 = grep(!/CHROMOSOMAL/, @annots);
+  $fusion_annot = '';
+  if (scalar(@annot2) > 0) {
+      $fusion_annot = join(",",@annot2);
   }
+  if ($known{$fname2} || $fusion_annot =~ m/CCLE|Cosmic|FA_CancerSupp|Klijn_CellLines|Mitelman|YOSHIHARA_TCGA|chimer/i) {
+      push @filter, 'LowReadCt' if ($hash{SumRNAReads} < 3);
+  }else {
+      push @filter, 'LowReadCt' if ($hash{SumRNAReads} < 5);
+  }
+  $rna_support = "yes";
+  if ($left_chr eq $right_chr) {
+      $diff = abs($right_pos-$left_pos);
+      push @filter, 'ReadThrough' if ($diff < 200000);
+  }
+  my $qc ='PASS';
+  if (scalar(@filter) > 0) {
+      $qc = join(";","FailedQC",@filter);
+  }
+  
+  print OAS join("\t",$fname,$hash{LeftGene},$hash{LeftBreakpoint},$leftexon,$hash{LeftStrand},
+		 $hash{RightGene},$hash{RightBreakpoint},$rightexon,$hash{RightStrand},
+		 $hash{SumRNAReads},0,lc($hash{PROT_FUSION_TYPE}),$fusion_annot,$qc,$chrtype,$chrdist),"\n";
+  print OUTIR join("\t",$hash{LeftGene},$entrez{$hash{LeftGene}},"UTSW",$sname,$fname." fusion",
+		   $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
+  print OUTIR join("\t",$hash{RightGene},$entrez{$hash{RightGene}},"UTSW",$sname,$fname." fusion",
+		   $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
 }
 
-close OUT;
+
+close OAS;
 close OUTIR;

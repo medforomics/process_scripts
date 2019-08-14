@@ -42,14 +42,14 @@ module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
 
 if [[ $method == 'trinity' ]]
 then
-    module load trinity/1.4.0
+    module load trinity/1.6.0
     tmphome="/tmp/$USER"
     if [[ -z $tmphome ]]
     then
 	mkdir $tmphome
     fi 
     export TMP_HOME=$tmphome
-    index_path=${refgeno}/CTAT_lib_trinity/
+    index_path=${refgeno}/CTAT_lib_trinity1.6
     trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $SLURM_CPUS_ON_NODE --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
     #cp ${pair_id}_star_fusion/star-fusion.fusion_predictions.abridged.tsv ${pair_id}.starfusion.txt
     cp ${pair_id}_star_fusion/star-fusion.fusion_predictions.abridged.coding_effect.tsv ${pair_id}.starfusion.txt

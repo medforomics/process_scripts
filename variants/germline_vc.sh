@@ -33,21 +33,21 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-if [[ -a "${index_path}/dbSnp.vcf.gz" ]]
+if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
 then
     dbsnp="${index_path}/dbSnp.vcf.gz"
 else 
     echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/GoldIndels.vcf.gz" ]]
+if [[ -s "${index_path}/GoldIndels.vcf.gz" ]]
 then
     knownindel="${index_path}/GoldIndels.vcf.gz"
 else 
     echo "Missing InDel File: ${index_path}/GoldIndels.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/genome.fa" ]]
+if [[ -s "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
     dict="${index_path}/genome.dict"
@@ -57,7 +57,7 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load python/2.7.x-anaconda picard/2.10.3 samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
+module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]
@@ -68,40 +68,44 @@ done
 
 if [[ $algo == 'mpileup' ]]
 then
-    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "samtools mpileup -t 'AD,DP,INFO/AD' -ug -Q20 -C50 -r {} -f ${reffa} *.bam | bcftools call -vmO z -o ${pair_id}.samchr.{}.vcf.gz"
-    vcf-concat ${pair_id}.samchr.*.vcf.gz |vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf -
+    threads=`expr $SLURM_CPUS_ON_NODE - 10`
+    bcftools mpileup --threads $threads -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} *.bam | bcftools call --threads 10 -vmO z -o ${pair_id}.vcf.gz
+    vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
     bgzip ${pair_id}.sam.vcf
-elif [[ $algo == 'hotspot' ]]
+elif [[ $algo == 'freebayes' ]]
 then
-    samtools mpileup -d 99999 -t 'AD,DP,INFO/AD' -uf ${reffa} *.bam > ${pair_id}.mpi
-    bcftools filter -i "AD[1]/DP > 0.01" ${pair_id}.mpi | bcftools filter -i "DP > 50" | bcftools call -m -A |vcf-annotate -n --fill-type |  bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.lowfreq.vcf.gz -
-    tabix ${pair_id}.lowfreq.vcf.gz
-    bcftools annotate -Ov -a ${index_path}/oncokb_hotspot.txt.gz -h ${index_path}/oncokb_hotspot.header -c CHROM,FROM,TO,OncoKB_REF,OncoKB_ALT,Gene,OncoKB_ProteinChange,OncoKB_AF,OncoTree_Tissue,OncoTree_MainType,OncoTree_Code,OncoKBHotspot ${pair_id}.lowfreq.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar annotate ${index_path}/cosmic.vcf.gz - | grep '#\|CNT\|OncoKBHotspot' | bgzip > ${pair_id}.hotspot.vcf.gz
-elif [[ $algo == 'speedseq' ]]
-then
-    module load speedseq/gcc/0.1.2
-    speedseq var -t $SLURM_CPUS_ON_NODE -o ssvar ${reffa} *.bam
-    vcf-annotate -n --fill-type ssvar.vcf.gz| bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.ssvar.vcf.gz -
+    module load freebayes/gcc/1.2.0 parallel/20150122
+    bamlist=''
+    for i in *.bam; do
+    bamlist="$bamlist --bam ${PWD}/${i}"
+    done
+    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
 elif [[ $algo == 'gatk' ]]
 then
-    module load gatk/3.8
+    gatk4_dbsnp=/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/dbSnp.gatk4.vcf.gz
+    user=$USER
+    module load gatk/4.1.2.0
     gvcflist=''
     for i in *.bam; do
-	cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j 10 "java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T HaplotypeCaller -stand_call_conf 10 -A FisherStrand -A QualByDepth -A VariantType -A DepthPerAlleleBySample -A HaplotypeScore -A AlleleBalance -variant_index_type LINEAR -variant_index_parameter 128000 --emitRefConfidence GVCF -I $i -o ${i}.{}.chr.gatk.g.vcf -nct 2 -L {}"
-	vcf-concat ${i}.*.chr.gatk.g.vcf |vcf-sort > gatk.g.vcf
-	rm ${i}.*.chr.gatk.g.vcf
-	java -jar $PICARD/picard.jar SortVcf I=gatk.g.vcf O=${i}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
-	gvcflist="$gvcflist --variant ${i}.gatk.g.vcf"
+	prefix="${i%.bam}"
+	echo ${prefix}
+	gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth  -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -O haplotypecaller.vcf.gz
+	java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf.gz O=${prefix}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
+	
+	gvcflist="$gvcflist -V ${prefix}.gatk.g.vcf"
     done
-    java -Djava.io.tmpdir=./ -Xmx32g -jar $GATK_JAR -R ${reffa} -D ${dbsnp} -T GenotypeGVCFs --disable_auto_index_creation_and_locking_when_reading_rods -o gatk.vcf $gvcflist
+    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+    gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb -L $interval
+    gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
     bamlist=`join_by , *.bam`
-    Platypus.py callVariants --minMapQual=10 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
+    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
@@ -113,15 +117,15 @@ then
     else
 	mode="--exome"
     fi
-    module load strelka/2.9.0 samtools/1.6 manta/1.3.1 snpeff/4.3q vcftools/0.1.14
+    module load strelka/2.9.10 manta/1.3.1
     mkdir manta strelka
     gvcflist=''
     for i in *.bam; do
 	gvcflist="$gvcflist --bam ${i}"
     done
     configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
-    manta/runWorkflow.py -m local -j 8
+    manta/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
     configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
-    strelka/runWorkflow.py -m local -j 8
+    strelka/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi
