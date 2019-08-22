@@ -46,7 +46,7 @@ source /etc/profile.d/modules.sh
 
 genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
 
-module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q
+module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
 touch ${pair_id}.pindel.config
 for i in *.bam; do
     sname="${i%.bam}"
@@ -61,4 +61,4 @@ java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/sn
 perl $baseDir/norm_annot.sh -r ${index_path} -p pindel_indel -v indel.vcf.gz
 mv pindel_indel.norm.vcf.gz ${pair_id}.pindel_indel.vcf.gz
 java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf |bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf |bgzip > ${pair_id}.pindel_sv.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
