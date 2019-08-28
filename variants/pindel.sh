@@ -9,11 +9,12 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:h opt
+while getopts :r:l:p:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
+	l) idtbed=$OPTARG;;
         h) usage;;
     esac
 done
@@ -55,10 +56,10 @@ done
 
 pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
 pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
-cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
-perl $baseDir/parse_pindel.pl ${pair_id} pindel.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > indel.vcf.gz
-perl $baseDir/norm_annot.sh -r ${index_path} -p pindel_indel -v indel.vcf.gz
-mv pindel_indel.norm.vcf.gz ${pair_id}.pindel_indel.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf |bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
+tabix pindel.vcf.gz
+bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
+perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
 java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz

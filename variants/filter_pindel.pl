@@ -6,7 +6,6 @@ use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
 my $results = GetOptions (\%opt,'td|d=s','indel|i=s','sv|s=s','tumor|t=s');
 
-
 my @files = grep(/vcf.gz/,values %opt);
 foreach $file (@files) {
   chomp($file);
@@ -18,8 +17,8 @@ foreach $file (@files) {
  W1:while (my $line = <IN>) {
     chomp($line);
     if ($line =~ m/^#/) {
-      print OUT $line,"\n";
       if ($line =~ m/^#CHROM/) {
+	    print OUT "##INFO=<ID=AF,Number=A,Type=Integer,Description=\"Alternate allele observation frequency\">\n";
 	my @header = split(/\t/,$line);
 	($chrom, $pos,$id,$ref,$alt,$score,
 	 $filter,$info,$format,@gtheader) = split(/\t/, $line);
@@ -32,6 +31,7 @@ foreach $file (@files) {
 	    }
 	}
       }
+      print OUT $line,"\n";
       next;
     }
     my ($chrom, $pos,$id,$ref,$alt,$score,
@@ -53,7 +53,7 @@ foreach $file (@files) {
       my @mutallfreq = ();
       foreach my $k (0..$#ainfo) {
 	$gtinfo{$subjid}{$deschead[$k]} = $ainfo[$k];
-	$hash{$deschead[$k]} = $ainfo[$k] if ($subjid eq $opt{tumor});
+	#$hash{$deschead[$k]} = $ainfo[$k] if ($subjid eq $opt{tumor});
       }
       $gtinfo{$subjid}{DP} = (split(/,/,$gtinfo{$subjid}{DP}))[0] if ($gtinfo{$subjid}{DP});
       next F1 unless ($gtinfo{$subjid}{DP} && $gtinfo{$subjid}{DP} ne '.' && $gtinfo{$subjid}{DP} >= 1);
@@ -108,7 +108,7 @@ foreach $file (@files) {
       }
     }
     my $newannot = join(";",@nannot);
-    print OUT join("\t",$chrom, $pos,$id,$ref,$alt,$score,$filter,$newannot,
+    print OUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$newannot,
 		   $format,@gts),"\n";
   }
   close IN;
