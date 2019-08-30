@@ -52,5 +52,4 @@ stexe=`which samtools`
 
 samtools view -@ $SLURM_CPUS_ON_NODE -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
-bcftools norm --fasta-ref $reffa -m - -Oz ${pair_id}.itdseek.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
- 
+bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx20g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
