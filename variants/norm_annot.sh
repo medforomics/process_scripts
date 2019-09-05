@@ -26,8 +26,18 @@ baseDir="`dirname \"$0\"`"
 source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
 
+if [[ -a "${index_path}/genome.fa" ]]
+then
+    reffa="${index_path}/genome.fa"
+    dict="${index_path}/genome.dict"
+else 
+    echo "Missing Fasta File: ${index_path}/genome.fa"
+    usage
+
+fi
+
 perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
 bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
-bcftools norm -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
