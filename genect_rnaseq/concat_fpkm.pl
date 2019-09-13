@@ -15,7 +15,7 @@ while (my $line = <SYM>) {
     chomp($line);
     my ($chrom,$start,$end,$ensembl,$symbol,$type) = split(/\t/,$line);
     $ensembl = (split(/\./,$ensembl))[0];
-    $names{$ensembl} = {symbol=>$symbol,type=>$type};
+    $names{$ensembl} = {chr=>$chrom,symbol=>$symbol,type=>$type};
 }
 
 my @files = @ARGV;
@@ -32,8 +32,13 @@ foreach $file (@files) {
     while (my $line = <IN>) {
 	chomp($line);
 	my ($ensid,$gene,$chr,$strand,$start,$end,$cov,$fpkm,$tmp) = split(/\t/,$line);
-	my ($ens,$version) = split(/\./,$ensid);
-	$cts{$ens}{$sample} = $fpkm;
+	my $ens = $ensid;
+	$ens =~ s/\.\d+//;
+	if ($chr eq $names{$ens}{chr}) {
+	    $cts{$ens}{$sample} = $fpkm;
+	}else {
+	    warn "unable to map to genenames\n";
+	}
     }
     close IN;
 }
