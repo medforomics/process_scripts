@@ -50,7 +50,7 @@ genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
 module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
 touch ${pair_id}.pindel.config
 for i in *.bam; do
-    sname="${i%.bam}"
+    sname=`echo "$i" |cut -f 1 -d '.'`
     echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
 done
 
