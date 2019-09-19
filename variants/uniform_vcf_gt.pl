@@ -59,6 +59,16 @@ while (my $line = <VCF>) {
 	  foreach (split(',',$gtdata{AO})) {
 	      $gtdata{DP} += $_;
 	  }
+      } elsif ($gtdata{TIR}) {
+	  $gtdata{GT} = '0/0';
+	  $gtdata{AO} = (split(/,/,$gtdata{TIR}))[0];
+	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
+      } elsif ($gtdata{$ref."U"} && $gtdata{$alt."U"}) {
+	  $gtdata{GT} = '0/0';
+	  $gtdata{AO} = (split(/,/,$gtdata{$alt."U"}))[0];
+	  $gtdata{RO} = (split(/,/,$gtdata{$ref."U"}))[0];
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       }
       if ($gtdata{DP} && $gtdata{DP} < 5) {
 	  $missingGT ++;
