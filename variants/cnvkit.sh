@@ -61,8 +61,8 @@ cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
-cnvkit.py call ${pair_id}.cns -o ${pair_id}.call.cns
-#cnvkit.py call ${pair_id}.cns -v common_variants.vcf -o ${pair_id}.ballelecall.cns
+cnvkit.py call --filter cn ${pair_id}.cns -o ${pair_id}.call.cns
+#cnvkit.py call --filter cn ${pair_id}.cns -v common_variants.vcf -o ${pair_id}.ballelecall.cns
 cnvkit.py scatter ${pair_id}.cnr -s ${pair_id}.call.cns -t --segment-color "blue" -o ${pair_id}.cnv.scatter.pdf
 cut -f 1,2,3 ${pair_id}.call.cns | grep -v chrom | bedtools intersect -wao -b /project/shared/bicf_workflow_ref/human/GRCh38/cytoBand.txt -a stdin |cut -f 1,2,3,7 >  ${pair_id}.cytoband.bed
 perl $baseDir/filter_cnvkit.pl ${pair_id}.call.cns
