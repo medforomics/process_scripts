@@ -38,7 +38,9 @@ then
     SLURM_CPUS_ON_NODE=64
 fi
 source /etc/profile.d/modules.sh
-module load subread/1.6.1 stringtie/1.3.2d-intel
+module load subread/1.6.1
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
+
 featureCounts -s $stranded -M --fraction -J --ignoreDup -T $SLURM_CPUS_ON_NODE -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
 mkdir ${pair_id}_stringtie
 cd ${pair_id}_stringtie
