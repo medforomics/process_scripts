@@ -80,7 +80,7 @@ then
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
 elif [[ $algo == 'gatk' ]]
 then

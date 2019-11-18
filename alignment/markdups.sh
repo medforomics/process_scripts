@@ -32,6 +32,7 @@ then
     SLURM_CPUS_ON_NODE=1
 fi
 baseDir="`dirname \"$0\"`"
+testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
 
 source /etc/profile.d/modules.sh
 module load picard/2.10.3 samtools/gcc/1.8
@@ -40,9 +41,11 @@ if [ $algo == 'sambamba' ]
 then
     module load speedseq/20160506
     sambamba markdup -t $SLURM_CPUS_ON_NODE ${sbam} ${pair_id}.dedup.bam
+    touch ${pair_id}.dedup.stat.txt
 elif [ $algo == 'samtools' ]
 then
     samtools markdup -s --output-fmt BAM -@ $SLURM_CPUS_ON_NODE sort.bam ${pair_id}.dedup.bam
+    touch ${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard' ]
 then
     java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
@@ -53,13 +56,19 @@ elif [ $algo == 'fgbio_umi' ]
 then
     module load fgbio bwa/intel/0.7.15
     samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
-    fgbio GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
-    fgbio CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
+    fgbio GroupReadsByUmi --tmp-dir ./ -s identity -i ${sbam} -o ${pair_id}.group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
+    fgbio CallMolecularConsensusReads --tmp-dir ./ -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
     samtools index ${pair_id}.consensus.bam
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
     gzip ${pair_id}.consensus.R1.fastq
     gzip ${pair_id}.consensus.R2.fastq
-    bwa mem -M -C -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" /project/shared/bicf_workflow_ref/human/GRCh38/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz | samtools view -1 - > ${pair_id}.consensus.bam
+    bwa mem -M -C -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" /project/shared/bicf_workflow_ref/human/GRCh38/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz > out.sam
+    if [ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]
+    then
+	k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | samtools view -1 - > ${pair_id}.consensus.bam
+    else
+	samtools view -1 out.sam > ${pair_id}.consensus.bam
+    fi
     samtools sort --threads $SLURM_CPUS_ON_NODE -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
 else
     cp ${sbam} ${pair_id}.dedup.bam    
