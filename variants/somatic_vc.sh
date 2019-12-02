@@ -20,7 +20,7 @@ usage(){
 }
 
 OPTIND=1 # Reset OPTIND
-while getopts :n:t:p:r:x:y:i:j:a:b:h opt
+while getopts :n:t:p:r:x:y:i:j:q:a:b:h opt
 do
     case $opt in 
       r) index_path=$OPTARG;;
@@ -33,6 +33,7 @@ do
       j) mtumor=$OPTARG;;
       a) algo=$OPTARG;;
       b) tbed=$OPTARG;; 
+      q) pon==$OPTARG;; 
       h) usage;;
     esac
 done
@@ -53,6 +54,12 @@ if [[ -z $mtumor ]]
 then
     mtumor=tumor
     mnormal=normal
+fi
+if [[ -z $pon ]]
+then
+    ponopt='';
+else
+    ponopt="--pon $pon"
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -105,14 +112,10 @@ if [ $algo == 'virmid' ]
 elif [ $algo == 'mutect2' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
-  user=$USER
-  module load gatk/4.x singularity/2.6.1 picard/2.10.3
-  mkdir /tmp/${user}
-  export TMP_HOME=/tmp/${user}
+  module load gatk/4.1.4.0 picard/2.10.3 snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
   java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${tumor} O=artifact_metrics.txt R=${reffa}
-  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" Mutect2 -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
-  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
-  module load snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
+  gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" Mutect2 $ponopt -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample --enable_strand_artifact_filter -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
+  gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
   vcf-sort ${tid}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then

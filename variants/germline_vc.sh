@@ -11,13 +11,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:a:b:p:th opt
+while getopts :r:a:b:q:p:th opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         a) algo=$OPTARG;;
 	t) rna=1;;
+	q) pon==$OPTARG;; 
         h) usage;;
     esac
 done
@@ -82,11 +83,19 @@ then
     done
     cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
+elif [[ $algo == 'platypus' ]]
+then
+    module load platypus/gcc/0.8.1
+    bamlist=`join_by , *.bam`
+    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
+    vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
+    tabix platypus.vcf.gz
+    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 elif [[ $algo == 'gatk' ]]
 then
     gatk4_dbsnp=/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/dbSnp.gatk4.vcf.gz
     user=$USER
-    module load gatk/4.1.2.0
+    module load gatk/4.1.4.0
     gvcflist=''
     for i in *.bam; do
 	prefix="${i%.bam}"
@@ -101,14 +110,18 @@ then
     gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
-elif [[ $algo == 'platypus' ]]
+elif [ $algo == 'mutect2' ]
 then
-    module load platypus/gcc/0.8.1
-    bamlist=`join_by , *.bam`
-    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
-    vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
-    tabix platypus.vcf.gz
-    bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
+  gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
+  module load gatk/4.1.4.0
+    for i in *.bam; do
+	prefix="${i%.bam}"
+	echo ${prefix}
+	java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${i} O=artifact_metrics.txt R=${reffa}
+	gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" Mutect2 $ponopt -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample --enable_strand_artifact_filter -I ${i} --output ${prefix}.mutect.vcf
+	gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" FilterMutectCalls -V ${prefix}.mutect.vcf -O ${prefix}.mutect.filt.vcf
+	vcf-sort ${prefix}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${prefix}.mutect.vcf.gz
+    done
 elif [[ $algo == 'strelka2' ]]
 then
     if [[ $rna == 1 ]]

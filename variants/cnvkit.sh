@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:f:t:c:uh opt
+while getopts :b:p:n:f:t:c:uqh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
@@ -21,6 +21,7 @@ do
 	t) targets=$OPTARG;;
 	c) capture=$OPTARG;;
 	u) umi='umi';;
+	q) idtsnp=1;;
         h) usage;;
     esac
 done
@@ -54,15 +55,24 @@ source /etc/profile.d/modules.sh
 module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8
 unset DISPLAY
 
-#samtools index ${sbam}
-#bcftools mpileup --threads 10 -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} -t ${index_path}/NGSCheckMate.bed ${sbam} | bcftools call --threads 10 -vmO v -o common_variants.vcf
+if [[ $idtsnp == 1 ]]
+then
+    samtools index ${sbam}
+    bcftools mpileup --threads 10 -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} -t ${index_path}/clinseq_prj/IDT_snps.120bp.bed ${sbam} | bcftools call --threads 10 -vmO v -o common_variants.vcf
+fi
 
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
-cnvkit.py call --filter cn ${pair_id}.cns -o ${pair_id}.call.cns
-#cnvkit.py call --filter cn ${pair_id}.cns -v common_variants.vcf -o ${pair_id}.ballelecall.cns
+
+if [[ $idtsnp == 1 ]]
+then
+    cnvkit.py call --filter cn ${pair_id}.cns -v common_variants.vcf -o ${pair_id}.call.cns
+else 
+    cnvkit.py call --filter cn ${pair_id}.cns -o ${pair_id}.call.cns
+fi
+
 cnvkit.py scatter ${pair_id}.cnr -s ${pair_id}.call.cns -t --segment-color "blue" -o ${pair_id}.cnv.scatter.pdf
 cut -f 1,2,3 ${pair_id}.call.cns | grep -v chrom | bedtools intersect -wao -b /project/shared/bicf_workflow_ref/human/GRCh38/cytoBand.txt -a stdin |cut -f 1,2,3,7 >  ${pair_id}.cytoband.bed
 perl $baseDir/filter_cnvkit.pl ${pair_id}.call.cns
