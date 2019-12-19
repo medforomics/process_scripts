@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:i:n:a:h opt
+while getopts :r:p:b:i:x:y:n:l:a:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -20,6 +20,9 @@ do
         i) tumor=$OPTARG;;
         n) normal=$OPTARG;;
 	a) method=$OPTARG;;
+        x) tid=$OPTARG;;
+        y) nid=$OPTARG;;
+	l) bed=$OPTARG;;
         h) usage;;
     esac
 done
@@ -49,17 +52,17 @@ else
 fi
 
 source /etc/profile.d/modules.sh	
-module load samtools/1.6 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
-mkdir temp
+module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 
 if [[ $method == 'delly' ]]
 then
-    module load  delly2/v0.7.7-multi samtools/1.6 snpeff/4.3q
+    mkdir temp
+    module load  delly2/v0.7.7-multi
     if [[ -n ${normal} ]]
     then
 	#RUN DELLY
-	echo -e "${normal}\tcontrol"> samples.tsv
-	echo -e "${tumor}\ttumor" >> samples.tsv
+	echo -e "${nid}\tcontrol"> samples.tsv
+	echo -e "${tid}\ttumor" >> samples.tsv
 	delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
 	delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
 	delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
@@ -86,7 +89,17 @@ then
     #MERGE DELLY AND MAKE BED
     bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
     bgzip delly.vcf
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | bgzip > ${pair_id}.delly.vcf.gz
+fi
+if [[ $method == 'svaba' ]]
+then
+    if [[ -n ${normal} ]]
+    then
+	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $SLURM_CPUS_ON_NODE -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
+    else
+	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $SLURM_CPUS_ON_NODE -G ${reffa} -t ${sbam} -a ${pair_id}
+    fi
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.svaba.unfiltered.somatic.sv.vcf | bgzip > ${pair_id}.svaba.vcf.gz
 fi
 
 if [[ $method == 'lumpy' ]]
@@ -107,5 +120,33 @@ then
     else
 	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
+fi
+if [[ $method == 'pindel' ]]
+then
+    module load pindel/0.2.5-intel
+    genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
+    touch ${pair_id}.pindel.config
+    for i in *.bam; do
+	sname=`echo "$i" |cut -f 1 -d '.'`
+	echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
+	samtools index -@ $SLURM_CPUS_ON_NODE $i
+    done
+    pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+    pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
+    cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
+    tabix pindel.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
+    perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+fi
+if [[ $method == 'itdseek' ]]
+then
+    stexe=`which samtools`
+    samtools view -@ $SLURM_CPUS_ON_NODE -L ${bed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
+
+    tabix ${pair_id}.itdseek.vcf.gz
+    bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
 fi

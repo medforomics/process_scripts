@@ -2,7 +2,7 @@
 #parse_cnvkit_table.pl
 
 my $refdir = '/project/shared/bicf_workflow_ref/human/GRCh38/';
-open OM, "<$refdir\/clinseq_prj/panel1410.genelist.txt" or die $!;
+open OM, "<$refdir\/clinseq_prj/panelgenes.txt" or die $!;
 while (my $line = <OM>) {
   chomp($line);
   $keep{$line} = 1;

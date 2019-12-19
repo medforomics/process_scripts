@@ -56,6 +56,12 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
+if [[ -z $pon ]]
+then
+    ponopt='';
+else
+    ponopt="--pon $pon"
+fi
 
 source /etc/profile.d/modules.sh
 module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
@@ -118,8 +124,8 @@ then
 	prefix="${i%.bam}"
 	echo ${prefix}
 	java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${i} O=artifact_metrics.txt R=${reffa}
-	gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" Mutect2 $ponopt -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample --enable_strand_artifact_filter -I ${i} --output ${prefix}.mutect.vcf
-	gatk --java-options "-Xmx20g -Djava.io.tmpdir=./" FilterMutectCalls -V ${prefix}.mutect.vcf -O ${prefix}.mutect.filt.vcf
+	gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} --enable-all-annotations -I ${i} --output ${prefix}.mutect.vcf
+	gatk --java-options "-Xmx20g" FilterMutectCalls -V ${prefix}.mutect.vcf -O ${prefix}.mutect.filt.vcf
 	vcf-sort ${prefix}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${prefix}.mutect.vcf.gz
     done
 elif [[ $algo == 'strelka2' ]]
