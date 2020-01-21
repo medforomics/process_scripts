@@ -76,7 +76,7 @@ done
 if [[ $algo == 'mpileup' ]]
 then
     threads=`expr $SLURM_CPUS_ON_NODE - 10`
-    bcftools mpileup --threads $threads -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} *.bam | bcftools call --threads 10 -vmO z -o ${pair_id}.vcf.gz
+    bcftools mpileup --threads $threads -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -A -d 1000000 -C50 -f ${reffa} *.bam | bcftools call -A --threads 10 -vmO z -o ${pair_id}.vcf.gz
     vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
     bgzip ${pair_id}.sam.vcf

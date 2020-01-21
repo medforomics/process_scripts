@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:f:t:c:uqh opt
+while getopts :b:p:n:t:r:uqh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
@@ -19,7 +19,6 @@ do
 	n) normals=$OPTARG;;
 	r) index_path=$OPTARG;;
 	t) targets=$OPTARG;;
-	c) capture=$OPTARG;;
 	u) umi='umi';;
 	q) idtsnp=1;;
         h) usage;;
@@ -31,7 +30,7 @@ baseDir="`dirname \"$0\"`"
 
 if [[ -z $index_path ]] 
 then
-    index_path='/project/shared/bicf_workflow_ref/human/GRCh38'
+    index_path='/project/shared/bicf_workflow_ref/human/grch38_cloud/dnaref'
 fi
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $sbam ]]
@@ -46,6 +45,14 @@ if [[ -z $normals ]] || [[ -z $targets ]]
 then
     usage
 fi
+if [[ -s "${index_path}/genome.fa" ]]
+then
+    reffa="${index_path}/genome.fa"
+    dict="${index_path}/genome.dict"
+else 
+    echo "Missing Fasta File: ${index_path}/genome.fa"
+    usage
+fi
 
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
@@ -58,7 +65,8 @@ unset DISPLAY
 if [[ $idtsnp == 1 ]]
 then
     samtools index ${sbam}
-    bcftools mpileup --threads 10 -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 99999 -C50 -f ${reffa} -t ${index_path}/clinseq_prj/IDT_snps.120bp.bed ${sbam} | bcftools call --threads 10 -vmO v -o common_variants.vcf
+    bcftools mpileup --threads 10 --gvcf 10 -A -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -Q20 -d 1000000 -L 1000000 -C50 -f ${reffa} ${sbam} | bcftools call --threads 10 -vmO v -o common_variants.vcf -T ${index_path}/IDT_snps.hg38.bed
+    $baseDir/formatVcfCNV.pl cnvkit_common common_variants.vcf
 fi
 
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
@@ -68,7 +76,7 @@ cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
 
 if [[ $idtsnp == 1 ]]
 then
-    cnvkit.py call --filter cn ${pair_id}.cns -v common_variants.vcf -o ${pair_id}.call.cns
+    cnvkit.py call --filter cn ${pair_id}.cns -v cnvkit_common.vcf -o ${pair_id}.call.cns
 else 
     cnvkit.py call --filter cn ${pair_id}.cns -o ${pair_id}.call.cns
 fi
