@@ -61,5 +61,12 @@ tabix pindel.vcf.gz
 bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
 perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
 java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+
+if [[ -a $idtbed ]]
+then
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+else
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+fi
+
 java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
