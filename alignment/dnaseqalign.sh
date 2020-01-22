@@ -51,20 +51,17 @@ module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
 baseDir="`dirname \"$0\"`"
 
 diff $fq1 $fq2 > difffile
-if [[ $aligner == 'bwa' ]]
+module load bwa/intel/0.7.17
+
+
+if [ -s difffile ]
 then
-    module load bwa/intel/0.7.17
-    if [ -s difffile ]
-	then
-    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
-	else
-    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
-	fi
-elif [[ $aligner == 'hisat2' ]]
-then
-	module load hisat2/2.1.0-intel
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt		
+    file_opt="${fq1} ${fq2}"
+else
+    file_opt="${fq1}"
 fi
+
+bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa $file_opt > out.sam
 
 if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
 then
@@ -78,6 +75,7 @@ then
 else
     samtools view -1 -o output.unsort.bam out.sam
 fi
+
 which samtools
 samtools sort -n --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
 java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam

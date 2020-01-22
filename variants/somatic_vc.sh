@@ -119,7 +119,7 @@ then
   vcf-sort ${tid}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then
-  module load samtools/gcc/1.8 VarScan/2.4.2 vcftools/0.1.14
+  module load bcftools/gcc/1.8 samtools/gcc/1.8 VarScan/2.4.2 vcftools/0.1.14
   module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
   samtools mpileup -C 50 -f ${reffa} $tumor > t.mpileup

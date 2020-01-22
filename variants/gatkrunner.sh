@@ -34,11 +34,11 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-if [[ -a "${index_path}/dbSnp.vcf.gz" ]]
+if [[ -a "${index_path}/dbSnp.gatk4.vcf.gz" ]]
 then
-    dbsnp="${index_path}/dbSnp.vcf.gz"
+    dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
 else 
-    echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
+    echo "Missing dbSNP File: ${index_path}/dbSnp.gatk4.vcf.gz"
     usage
 fi
 if [[ -a "${index_path}/GoldIndels.vcf.gz" ]]
