@@ -43,7 +43,7 @@ while (my $line = <VCF>) {
       foreach my $i (0..$#deschead) {
 	  $gtdata{$deschead[$i]} = $gtinfo[$i];
       }
-      if ($alt eq '.') {
+      if ($alt eq '.' || $alt eq '<NON_REF>') {
 	  $gtdata{AO} = 0;
 	  $gtdata{RO} = $gtdata{DP};
 	  $gtdata{AD} = join(",", $gtdata{RO},$gtdata{AO});
@@ -69,7 +69,7 @@ while (my $line = <VCF>) {
     next if ($missingGT == scalar(@gts));
     if ($hash{END}) {
 	foreach $i ($pos..$hash{END}) {
-	    print OUT join("\t",$chrom,$i,$id,'N','N',$score,$filter,$annot,$newformat,@newgts),"\n";
+	    print OUT join("\t",$chrom,$i,$id,$ref,'.',$score,$filter,$annot,$newformat,@newgts),"\n";
 	}
     }else {
 	print OUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
