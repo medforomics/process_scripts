@@ -15,6 +15,7 @@ do
     case $opt in
         p) pair_id=$OPTARG;;
 	v) vcf=$OPTARG;;
+	r) index_path=$OPTARG;;
         h) usage;;
     esac
 done
@@ -25,6 +26,15 @@ baseDir="`dirname \"$0\"`"
 source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
 
+if [[ -a "${index_path}/genome.fa" ]]
+then
+    reffa="${index_path}/genome.fa"
+    dict="${index_path}/genome.dict"
+else 
+    echo "Missing Fasta File: ${index_path}/genome.fa"
+    usage
+
+fi
 
 perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
 bgzip -f ${pair_id}.uniform.vcf
