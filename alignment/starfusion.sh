@@ -14,7 +14,7 @@ OPTIND=1 # Reset OPTIND
 while getopts :r:a:b:p:m:fh opt
 do
     case $opt in
-        r) refgeno=$OPTARG;;
+        r) index_path=$OPTARG;;
         a) fq1=$OPTARG;;
         b) fq2=$OPTARG;;
         p) pair_id=$OPTARG;;
@@ -49,13 +49,13 @@ then
 	mkdir $tmphome
     fi 
     export TMP_HOME=$tmphome
-    index_path=${refgeno}/CTAT_lib_trinity1.6
-    trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $SLURM_CPUS_ON_NODE --genome_lib_dir ${index_path} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
+    refgeno=${index_path}/CTAT_lib_trinity1.6
+    trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $SLURM_CPUS_ON_NODE --genome_lib_dir ${refgeno} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
     cp ${pair_id}_star_fusion/star-fusion.fusion_predictions.abridged.coding_effect.tsv ${pair_id}.starfusion.txt
 else
     module add star/2.5.2b
-    index_path=${refgeno}/CTAT_lib/
-    STAR-Fusion --genome_lib_dir ${index_path} --min_sum_frags 3 --left_fq ${fq1} --right_fq ${fq2} --output_dir ${pair_id}_star_fusion &> star_fusion.err
+    refgeno=${index_path}/CTAT_lib/
+    STAR-Fusion --genome_lib_dir ${refgeno} --min_sum_frags 3 --left_fq ${fq1} --right_fq ${fq2} --output_dir ${pair_id}_star_fusion &> star_fusion.err
     cp ${pair_id}_star_fusion/star-fusion.fusion_candidates.final.abridged ${pair_id}.starfusion.txt
 fi
 
@@ -66,8 +66,8 @@ cut -f 5-8 ${pair_id}.starfusion.txt |perl -pe 's/\^|:/\t/g' | awk '{print "sing
 if [[ $filter == 1 ]]
 then
     cut -f 6,8 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
-    bedtools intersect -wao -a temp.bed -b /project/shared/bicf_workflow_ref/human/GRCh38/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
-    perl $baseDir/filter_genefusions.pl -p ${pair_id} -f ${pair_id}.starfusion.txt
+    bedtools intersect -wao -a temp.bed -b ${index_path}/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
+    perl $baseDir/filter_genefusions.pl -p ${pair_id} -r ${index_path} -f ${pair_id}.starfusion.txt
 fi
 
 

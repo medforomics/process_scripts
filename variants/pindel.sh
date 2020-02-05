@@ -15,6 +15,7 @@ do
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
 	l) idtbed=$OPTARG;;
+	g) snpeffgeno=$OPTARG;;
         h) usage;;
     esac
 done
@@ -46,8 +47,12 @@ fi
 source /etc/profile.d/modules.sh	
 
 genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
+fi
 
-module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
+module load samtools/gcc/1.8 bcftools/gcc/1.8 htslib/gcc/1.8 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
 touch ${pair_id}.pindel.config
 for i in *.bam; do
     sname=`echo "$i" |cut -f 1 -d '.'`
@@ -60,13 +65,13 @@ cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10
 tabix pindel.vcf.gz
 bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
 perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
 
 if [[ -a $idtbed ]]
 then
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
 else
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
 fi
 
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz

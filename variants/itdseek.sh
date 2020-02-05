@@ -16,6 +16,7 @@ do
         b) sbam=$OPTARG;;	
         p) pair_id=$OPTARG;;
 	l) itdbed=$OPTARG;;
+	g) snpeffgeno=$OPTARG;;
         h) usage;;
     esac
 done
@@ -32,6 +33,10 @@ fi
 if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
+fi
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -52,4 +57,4 @@ stexe=`which samtools`
 
 samtools view -@ $SLURM_CPUS_ON_NODE -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
-bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config $snpeffgeno - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz

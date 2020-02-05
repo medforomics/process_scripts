@@ -45,6 +45,7 @@ if [[ -z $normal ]] || [[ -z $tumor ]] || [[ -z $algo ]]; then
     echo $normal $tumor $algo
     usage
 fi 
+
 if [[ -z $SLURM_CPUS_ON_NODE ]] 
   then 
     SLURM_CPUS_ON_NODE=1
@@ -55,11 +56,11 @@ then
     mtumor=tumor
     mnormal=normal
 fi
-if [[ -z $pon ]]
+if [[ -f $pon ]]
 then
-    ponopt='';
-else
     ponopt="--pon $pon"
+else
+    ponopt='';
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -114,8 +115,8 @@ then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
   module load gatk/4.1.4.0 picard/2.10.3 snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
   java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${tumor} O=artifact_metrics.txt R=${reffa}
-  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} --enable-all-annotations -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
-  gatk --java-options "-Xmx20g" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
+  gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
   vcf-sort ${tid}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then

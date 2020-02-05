@@ -35,7 +35,7 @@ shift $(($OPTIND -1))
 #fi
 
 source /etc/profile.d/modules.sh
-module load samtools/1.6 fastqc/0.11.5
+module load samtools/gcc/1.8 fastqc/0.11.5
 samtools flagstat ${sbam} > ${pair_id}.flagstat.txt
 fastqc -f bam ${sbam}
 baseDir="`dirname \"$0\"`"

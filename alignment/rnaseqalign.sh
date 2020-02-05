@@ -59,9 +59,9 @@ else
     module load hisat2/2.1.0-intel
     if [ -s difffile ]
     then
-        hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
+        hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
     else
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/hisat_index/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
+	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
     if [[ $umi == 1 ]]
     then

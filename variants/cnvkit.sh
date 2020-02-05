@@ -84,5 +84,5 @@ else
     cnvkit.py scatter ${pair_id}.cnr -s ${pair_id}.call.cns -t --segment-color "blue" -o ${pair_id}.cnv.scatter.pdf
 fi
 
-cut -f 1,2,3 ${pair_id}.call.cns | grep -v chrom | bedtools intersect -wao -b /project/shared/bicf_workflow_ref/human/GRCh38/cytoBand.txt -a stdin |cut -f 1,2,3,7 >  ${pair_id}.cytoband.bed
+cut -f 1,2,3 ${pair_id}.call.cns | grep -v chrom | bedtools intersect -wao -b ${index_path}/cytoBand.txt -a stdin |cut -f 1,2,3,7 >  ${pair_id}.cytoband.bed
 perl $baseDir/filter_cnvkit.pl -s ${pair_id}.call.cns

@@ -50,6 +50,10 @@ else
     usage
 
 fi
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
+fi
 
 source /etc/profile.d/modules.sh	
 module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
@@ -89,7 +93,7 @@ then
     #MERGE DELLY AND MAKE BED
     bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
     bgzip delly.vcf
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 delly.vcf | bgzip > ${pair_id}.delly.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} delly.vcf | bgzip > ${pair_id}.delly.vcf.gz
 fi
 if [[ $method == 'svaba' ]]
 then
@@ -99,7 +103,7 @@ then
     else
 	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $SLURM_CPUS_ON_NODE -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.svaba.unfiltered.somatic.sv.vcf | bgzip > ${pair_id}.svaba.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.svaba.unfiltered.somatic.sv.vcf | bgzip > ${pair_id}.svaba.vcf.gz
 fi
 
 if [[ $method == 'lumpy' ]]
@@ -120,7 +124,7 @@ then
     else
 	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
 fi
 if [[ $method == 'pindel' ]]
 then
@@ -136,11 +140,11 @@ then
     pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
     cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
     tabix pindel.vcf.gz
-    bash $baseDir/norm_annot.sh -p pindel -v pindel.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
     perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
 fi
 if [[ $method == 'itdseek' ]]
 then
@@ -148,5 +152,5 @@ then
     samtools view -@ $SLURM_CPUS_ON_NODE -L ${bed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 
     tabix ${pair_id}.itdseek.vcf.gz
-    bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+    bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
 fi

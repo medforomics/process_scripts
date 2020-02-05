@@ -10,12 +10,13 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:v:h opt
+while getopts :r:p:g:v:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
 	v) vcf=$OPTARG;;
+	g) snpeffgeno=$OPTARG;;
         h) usage;;
     esac
 done
@@ -42,6 +43,6 @@ bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
 bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
-bash $baseDir/annotvcf.sh -p ${pair_id} -r $index_path -v ${pair_id}.norm.vcf.gz
+bash $baseDir/annotvcf.sh -p ${pair_id} -r $index_path -v ${pair_id}.norm.vcf.gz -g $snpeffgeno
 /project/shared/bicf_workflow_ref/seqprg/vt/vt decompose_blocksub ${pair_id}.annot.vcf.gz -p -a -o ${pair_id}.vcf
 bgzip -f ${pair_id}.vcf

@@ -37,6 +37,7 @@ fi
 if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
 then
     dbsnp="${index_path}/dbSnp.vcf.gz"
+    gatk4_dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
 else 
     echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
     usage
@@ -56,11 +57,11 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
-if [[ -z $pon ]]
+if [[ -f $pon ]]
 then
-    ponopt='';
-else
     ponopt="--pon $pon"
+else
+    ponopt='';
 fi
 
 source /etc/profile.d/modules.sh
@@ -99,7 +100,6 @@ then
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 elif [[ $algo == 'gatk' ]]
 then
-    gatk4_dbsnp=/project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/dbSnp.gatk4.vcf.gz
     user=$USER
     module load gatk/4.1.4.0
     gvcflist=''
@@ -120,14 +120,14 @@ elif [ $algo == 'mutect2' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
   module load gatk/4.1.4.0
-    for i in *.bam; do
-	prefix="${i%.bam}"
-	echo ${prefix}
-	java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${i} O=artifact_metrics.txt R=${reffa}
-	gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} --enable-all-annotations -I ${i} --output ${prefix}.mutect.vcf
-	gatk --java-options "-Xmx20g" FilterMutectCalls -V ${prefix}.mutect.vcf -O ${prefix}.mutect.filt.vcf
-	vcf-sort ${prefix}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${prefix}.mutect.vcf.gz
-    done
+  bamlist=''
+  for i in *.bam; do
+      bamlist+="-I ${i} "
+  done
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates
+  gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${pair_id}.mutect.vcf -O ${pair_id}.mutect.filt.vcf
+  vcf-sort ${pair_id}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+
 elif [[ $algo == 'strelka2' ]]
 then
     if [[ $rna == 1 ]]
