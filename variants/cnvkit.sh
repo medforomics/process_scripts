@@ -35,9 +35,10 @@ if [[ -z $pair_id ]] || [[ -z $sbam ]]
 then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 if [[ -z $paneldir ]]
 then

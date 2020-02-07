@@ -33,9 +33,10 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 if [[ -z $read_group ]]
@@ -61,7 +62,7 @@ else
     file_opt="${fq1}"
 fi
 
-bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa $file_opt > out.sam
+bwa mem -M -t $NPROC -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa $file_opt > out.sam
 
 if [[ $umi == 'umi' ]] && [[ -f "${index_path}/genome.fa.alt" ]]
 then
@@ -77,6 +78,6 @@ else
 fi
 
 which samtools
-samtools sort -n --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
+samtools sort -n --threads $NPROC -o output.dups.bam output.unsort.bam
 java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
 samtools index ${pair_id}.bam

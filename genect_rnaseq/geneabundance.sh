@@ -29,20 +29,21 @@ if [[ -z $pair_id ]] || [[ -z $sbam ]]
 then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
-if [[ $SLURM_CPUS_ON_NODE > 64 ]]
+if [[ $NPROC > 64 ]]
 then
-    SLURM_CPUS_ON_NODE=64
+    NPROC=64
 fi
 source /etc/profile.d/modules.sh
 module load subread/1.6.1
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
-featureCounts -s $stranded -M --fraction -J --ignoreDup -T $SLURM_CPUS_ON_NODE -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
+featureCounts -s $stranded -M --fraction -J --ignoreDup -T $NPROC -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
 mkdir ${pair_id}_stringtie
 cd ${pair_id}_stringtie
-stringtie ../${sbam} -p $SLURM_CPUS_ON_NODE -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
+stringtie ../${sbam} -p $NPROC -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
  

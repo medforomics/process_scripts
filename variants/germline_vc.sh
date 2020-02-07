@@ -30,9 +30,10 @@ shift $(($OPTIND -1))
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
 then
@@ -70,13 +71,13 @@ module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]
     then
-	samtools index -@ $SLURM_CPUS_ON_NODE $i
+	samtools index -@ $NPROC $i
     fi
 done
 
 if [[ $algo == 'mpileup' ]]
 then
-    threads=`expr $SLURM_CPUS_ON_NODE - 10`
+    threads=`expr $NPROC - 10`
     bcftools mpileup --threads $threads -a 'INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR' -Ou -A -d 1000000 -C50 -f ${reffa} *.bam | bcftools call -A --threads 10 -vmO z -o ${pair_id}.vcf.gz
     vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
@@ -88,13 +89,13 @@ then
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $SLURM_CPUS_ON_NODE "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $NPROC "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
     bamlist=`join_by , *.bam`
-    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$SLURM_CPUS_ON_NODE --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
+    Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$NPROC --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
@@ -143,8 +144,8 @@ then
 	gvcflist="$gvcflist --bam ${i}"
     done
     configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
-    manta/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
+    manta/runWorkflow.py -m local -j $NPROC
     configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
-    strelka/runWorkflow.py -m local -j $SLURM_CPUS_ON_NODE
+    strelka/runWorkflow.py -m local -j $NPROC
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi

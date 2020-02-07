@@ -31,9 +31,10 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 baseDir="`dirname \"$0\"`"
@@ -50,7 +51,7 @@ then
     fi 
     export TMP_HOME=$tmphome
     refgeno=${index_path}/CTAT_lib_trinity1.6
-    trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $SLURM_CPUS_ON_NODE --genome_lib_dir ${refgeno} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
+    trinity /usr/local/src/STAR-Fusion/STAR-Fusion --min_sum_frags 3 --CPU $NPROC --genome_lib_dir ${refgeno} --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
     cp ${pair_id}_star_fusion/star-fusion.fusion_predictions.abridged.coding_effect.tsv ${pair_id}.starfusion.txt
 else
     module add star/2.5.2b

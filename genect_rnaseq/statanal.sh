@@ -20,9 +20,10 @@ shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
 # Check for mandatory options
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 source /etc/profile.d/modules.sh
 

@@ -36,9 +36,10 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -99,9 +100,9 @@ if [[ $method == 'svaba' ]]
 then
     if [[ -n ${normal} ]]
     then
-	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $SLURM_CPUS_ON_NODE -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
+	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $NPROC -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
     else
-	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $SLURM_CPUS_ON_NODE -G ${reffa} -t ${sbam} -a ${pair_id}
+	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.svaba.unfiltered.somatic.sv.vcf | bgzip > ${pair_id}.svaba.vcf.gz
 fi
@@ -109,20 +110,20 @@ fi
 if [[ $method == 'lumpy' ]]
 then
     #MAKE FILES FOR LUMPY
-    samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${sbam}
+    samtools sort -@ $NPROC -n -o namesort.bam ${sbam}
     samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
     gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o splitters.bam -
     gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o discordants.bam -
     #RUN LUMPY
     if [[ -n ${normal} ]]
     then
-	samtools sort -@ $SLURM_CPUS_ON_NODE -n -o namesort.bam ${normal}
+	samtools sort -@ $NPROC -n -o namesort.bam ${normal}
 	samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
 	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o normal.splitters.bam -
 	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o normal.discordants.bam -
-	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
+	speedseq sv -t $NPROC -o lumpy -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
     else
-	speedseq sv -t $SLURM_CPUS_ON_NODE -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
+	speedseq sv -t $NPROC -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
     fi
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
 fi
@@ -134,9 +135,9 @@ then
     for i in *.bam; do
 	sname=`echo "$i" |cut -f 1 -d '.'`
 	echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
-	samtools index -@ $SLURM_CPUS_ON_NODE $i
+	samtools index -@ $NPROC $i
     done
-    pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+    pindel -T $NPROC -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
     pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
     cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
     tabix pindel.vcf.gz
@@ -149,7 +150,7 @@ fi
 if [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
-    samtools view -@ $SLURM_CPUS_ON_NODE -L ${bed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
+    samtools view -@ $NPROC -L ${bed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 
     tabix ${pair_id}.itdseek.vcf.gz
     bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz

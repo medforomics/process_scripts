@@ -31,9 +31,10 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 if [[ -z $snpeffgeno ]]
 then
@@ -56,7 +57,7 @@ source /etc/profile.d/modules.sh
 module load samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14 htslib/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 
 stexe=`which samtools`
 
-samtools view -@ $SLURM_CPUS_ON_NODE -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
+samtools view -@ $NPROC -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
 bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config $snpeffgeno - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
 

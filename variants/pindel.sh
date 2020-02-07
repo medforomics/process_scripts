@@ -29,9 +29,10 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -59,7 +60,7 @@ for i in *.bam; do
     echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
 done
 
-pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+pindel -T $NPROC -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
 pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
 cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
 tabix pindel.vcf.gz

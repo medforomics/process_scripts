@@ -41,7 +41,7 @@ for i in ${dir}/*.vcf.gz; do
     if [[ $i == $HS ]]
     then
 	bcftools norm -m - -O z -o hotspot.norm.vcf.gz $i
-	java -jar /cm/shared/apps/snpeff/4.3q/SnpSift.jar filter "(GEN[*].AD[1] > 3)" hotspot.norm.vcf.gz |bgzip > hotspot.lowfilt.vcf.gz
+	java -jar $SNPEFF_HOME/SnpSift.jar filter "(GEN[*].AD[1] > 3)" hotspot.norm.vcf.gz |bgzip > hotspot.lowfilt.vcf.gz
 	bedtools multiinter -i $list1 |cut -f 1,2,3 |bedtools intersect -header -v -a hotspot.lowfilt.vcf.gz -b stdin |bgzip > nooverlap.hotspot.vcf.gz
 	list2="$list2 nooverlap.hotspot.vcf.gz"
     fi

@@ -28,10 +28,12 @@ if [[ -z $pair_id ]] || [[ -z $sbam ]]; then
     usage
 fi
 
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
+
 if [[ -z $index_path ]]
 then
     index_path="/project/shared/bicf_workflow_ref/human/grch38_cloud/dnaref"
@@ -46,39 +48,39 @@ module load picard/2.10.3
 if [ $algo == 'sambamba' ]
 then
     module load speedseq/20160506
-    sambamba markdup -t $SLURM_CPUS_ON_NODE ${sbam} ${pair_id}.dedup.bam
+    sambamba markdup -t $NPROC ${sbam} ${pair_id}.dedup.bam
     touch ${pair_id}.dedup.stat.txt
 elif [ $algo == 'samtools' ]
 then
     module load samtools/gcc/1.8
-    samtools markdup -s --output-fmt BAM -@ $SLURM_CPUS_ON_NODE sort.bam ${pair_id}.dedup.bam
+    samtools markdup -s --output-fmt BAM -@ $NPROC sort.bam ${pair_id}.dedup.bam
     touch ${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard' ]
 then
-    java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
+    java -XX:ParallelGCThreads=$NPROC -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard_umi' ]
 then
-    java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
+    java -XX:ParallelGCThreads=$NPROC -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'fgbio_umi' ]   
 then
     module load fgbio bwakit/0.7.15 bwa/intel/0.7.17 samtools/gcc/1.8
-    samtools index -@ $SLURM_CPUS_ON_NODE ${sbam}
+    samtools index -@ $NPROC ${sbam}
     fgbio --tmp-dir ./ GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
     fgbio --tmp-dir ./ CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
     samtools index ${pair_id}.consensus.bam
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
     gzip ${pair_id}.consensus.R1.fastq
     gzip ${pair_id}.consensus.R2.fastq
-    bwa mem -M -C -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz > out.sam
+    bwa mem -M -C -t $NPROC -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz > out.sam
     if [[ ${index_path}/genome.fa.alt ]]
     then
 	k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | samtools view -1 - > ${pair_id}.consensus.bam
     else
 	samtools view -1 out.sam > ${pair_id}.consensus.bam
     fi
-    samtools sort --threads $SLURM_CPUS_ON_NODE -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
+    samtools sort --threads $NPROC -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
 else
     cp ${sbam} ${pair_id}.dedup.bam    
 fi
 module load samtools/gcc/1.8
-samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.dedup.bam
+samtools index -@ $NPROC ${pair_id}.dedup.bam
