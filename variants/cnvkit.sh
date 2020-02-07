@@ -15,12 +15,10 @@ while getopts :b:p:n:t:r:uqh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
+	d) paneldir=$OPTARG;;
         p) pair_id=$OPTARG;;
-	n) normals=$OPTARG;;
 	r) index_path=$OPTARG;;
-	t) targets=$OPTARG;;
 	u) umi='umi';;
-	q) idtsnp=1;;
         h) usage;;
     esac
 done
@@ -41,7 +39,7 @@ if [[ -z $SLURM_CPUS_ON_NODE ]]
 then
     SLURM_CPUS_ON_NODE=1
 fi
-if [[ -z $normals ]] || [[ -z $targets ]]
+if [[ -z $paneldir ]]
 then
     usage
 fi
@@ -53,13 +51,34 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
+if [[ -z $paneldir ]] 
+then
+    paneldir="UTSW_V3_pancancer"
+fi
+
+capture="$paneldir/targetpanel.bed"
+targets="$paneldir/cnvkit."
+normals="$paneldir/pon.cnn"
+
+source /etc/profile.d/modules.sh
+module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 java/oracle/jdk1.8.0_171 snpeff/4.3q
+
+if [[ -f "${paneldir}/pon.downsample.cnn" ]]
+then
+    bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a ${capture} -b ${sbam} -hist > covhist.txt
+    grep ^all covhist.txt > genomecov.txt
+    sumdepth=`awk '{ sum+= $2*$3;} END {print sum;}' genomecov.txt`
+    total=`head -n 1 genomecov.txt |cut -f 4`
+    avgdepth=$((${sumdepth}/${total}))
+    if [[ "$avgdepth" -lt 1000 ]]
+    then
+	normals="${paneldir}/pon.downsample.cnn"
+    fi
+fi
 
 echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
 echo "${normals}"
-
-source /etc/profile.d/modules.sh
-module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 java/oracle/jdk1.8.0_171 snpeff/4.3q
 
 unset DISPLAY
 
@@ -68,7 +87,9 @@ cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcov
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
 cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
 
-if [[ $idtsnp == 1 ]]
+numsnps=`grep -c -P "rs[0-9]+" ${targets}targets.bed`
+
+if [[ $numsnps > 100 ]]
 then
     samtools index ${sbam}
     java -jar /cm/shared/apps/gatk/3.8/target/package/GenomeAnalysisTK.jar -T UnifiedGenotyper -R ${reffa} --output_mode EMIT_ALL_SITES -L ${index_path}/IDT_snps.hg38.bed -o common_variants.vcf -glm BOTH -dcov 10000 -I ${sbam}

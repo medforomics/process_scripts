@@ -9,7 +9,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:b:l:p:h opt
+while getopts :r:b:l:p:fh opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -17,6 +17,7 @@ do
         p) pair_id=$OPTARG;;
 	l) itdbed=$OPTARG;;
 	g) snpeffgeno=$OPTARG;;
+	f) filter=1;;
         h) usage;;
     esac
 done
@@ -58,3 +59,11 @@ stexe=`which samtools`
 samtools view -@ $SLURM_CPUS_ON_NODE -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
 bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config $snpeffgeno - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+
+if [[ $filter == 1 ]]
+then
+    perl $baseDir/filter_itdseeker.pl -t ${pair_id} -d ${pair_id}.itdseek_tandemdup.vcf.gz
+    mv ${pair_id}.itdseek_tandemdup.vcf.gz ${pair_id}.itdseek_tandemdup.unfilt.vcf.gz
+    mv ${pair_id}.itdseek_tandemdup.pass.vcf ${pair_id}.itdseek_tandemdup.vcf
+    bgzip ${pair_id}.itdseek_tandemdup.pass.vcf
+fi
