@@ -33,6 +33,10 @@ else
     usage
 
 fi
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
+fi
 
 source /etc/profile.d/modules.sh
 module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
