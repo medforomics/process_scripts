@@ -104,7 +104,10 @@ then
     else
 	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.svaba.unfiltered.somatic.sv.vcf | bgzip > ${pair_id}.svaba.vcf.gz
+    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.unfiltered.vcf
+    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba -v svaba.unfiltered.vcf -s
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.norm.vcf | bgzip > svaba.vcf.gz
+    
 fi
 
 if [[ $method == 'lumpy' ]]

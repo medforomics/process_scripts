@@ -10,12 +10,13 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:v:h opt
+while getopts :r:p:v:sh opt
 do
     case $opt in
         p) pair_id=$OPTARG;;
 	v) vcf=$OPTARG;;
 	r) index_path=$OPTARG;;
+	s) skipnorm=1;;
         h) usage;;
     esac
 done
@@ -40,4 +41,9 @@ perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
 bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
-bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+if [[ skipnorm==1 ]]
+then
+    cp $j ${pair_id}.norm.vcf.gz
+else
+    bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+fi

@@ -42,13 +42,17 @@ while (my $line = <VCF>) {
       foreach my $i (0..$#deschead) {
 	  $gtdata{$deschead[$i]} = $gtinfo[$i];
       }
-      if ($gtdata{AD}){
+      if ($gtdata{AD} =~ m/\d+,\d+/){
 	  ($gtdata{RO},@alts) = split(/,/,$gtdata{AD});
 	  $gtdata{AO} = join(",",@alts);
 	  $gtdata{DP} = $gtdata{RO};
 	  foreach (@alts) {
 	      $gtdata{DP} += $_;
 	  }
+      } elsif ($gtdata{AD} =~ m/^\d+$/ && $gtdata{DP}){
+	  $gtdata{AO} = $gtdata{AD};
+	  $gtdata{RO} = $gtdata{DP} - $gtdata{AD};
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       } elsif (exists $gtdata{NR} && exists $gtdata{NV}) {
 	      $gtdata{DP} = $gtdata{NR}; 	
 	      $gtdata{AO} = $gtdata{NV};
