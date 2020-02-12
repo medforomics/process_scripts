@@ -22,6 +22,7 @@ do
 done
 
 shift $(($OPTIND -1))
+baseDir="`dirname \"$0\"`"
 
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
