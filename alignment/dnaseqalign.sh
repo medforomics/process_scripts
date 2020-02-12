@@ -67,7 +67,7 @@ bwa mem -M -t $NPROC -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\t
 if [[ $umi == 'umi' ]] && [[ -f "${index_path}/genome.fa.alt" ]]
 then
     k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
-elif [[ "${index_path}/genome.fa.alt" ]]
+elif [[ -f "${index_path}/genome.fa.alt" ]]
 then
     k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
 elif [[ $umi == 'umi' ]]

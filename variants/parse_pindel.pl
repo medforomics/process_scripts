@@ -79,7 +79,7 @@ while (my $line = <VCF>) {
   if ($hash{SVTYPE} eq 'DUP:TANDEM') {
     print DUP join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
   }elsif ($hash{SVTYPE} eq 'DEL' || $hash{SVTYPE} eq 'INS') {
-    if (abs($hash{SVLEN}) < 50) {
+    if (abs($hash{SVLEN}) < 20) {
       print SI join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
     }else {
       $newalt = "<".$hash{SVTYPE}.">";
