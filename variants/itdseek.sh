@@ -52,12 +52,12 @@ else
 fi
 
 source /etc/profile.d/modules.sh	
-
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 module load samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14 htslib/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 
 stexe=`which samtools`
 
-samtools view -@ $NPROC -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
+samtools view -@ $NPROC -L ${itdbed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
 bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config $snpeffgeno - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
 

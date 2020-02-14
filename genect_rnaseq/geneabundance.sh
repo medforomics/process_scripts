@@ -40,6 +40,7 @@ then
 fi
 source /etc/profile.d/modules.sh
 module load subread/1.6.1
+
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 featureCounts -s $stranded -M --fraction -J --ignoreDup -T $NPROC -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}

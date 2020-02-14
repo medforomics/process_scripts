@@ -58,6 +58,7 @@ fi
 
 source /etc/profile.d/modules.sh	
 module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 if [[ $method == 'delly' ]]
 then
@@ -100,9 +101,9 @@ if [[ $method == 'svaba' ]]
 then
     if [[ -n ${normal} ]]
     then
-	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $NPROC -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
+	svaba run -p $NPROC -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
     else
-	/project/shared/bicf_workflow_ref/seqprg/svaba/bin/svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
+	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.unfiltered.vcf
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba -v svaba.unfiltered.vcf -s

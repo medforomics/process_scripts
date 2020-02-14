@@ -39,8 +39,14 @@ then
     index_path="/project/shared/bicf_workflow_ref/human/grch38_cloud/dnaref"
 fi
 
+if [[ $index_path == *project* ]]
+then
+    testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+else
+    testexe='/usr/local/bin'
+fi
+
 baseDir="`dirname \"$0\"`"
-testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
 
 source /etc/profile.d/modules.sh
 module load picard/2.10.3

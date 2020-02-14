@@ -44,7 +44,12 @@ then
     read_group=$pair_id
 fi
 
-testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+if [[ $index_path == *project* ]]
+then
+    testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+else
+    testexe='/usr/local/bin'
+fi
 
 source /etc/profile.d/modules.sh
 module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3

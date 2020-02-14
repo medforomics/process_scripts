@@ -58,7 +58,7 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load gatk/4.1.2.0 samtools/gcc/1.8
+module load gatk/4.1.4.0 samtools/gcc/1.8
 which samtools
 /cm/shared/apps/samtools/gcc/1.8/bin/samtools index -@ $NPROC ${sbam}
 
