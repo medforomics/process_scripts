@@ -59,10 +59,10 @@ fi
 source /etc/profile.d/modules.sh	
 module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
+mkdir temp
 
 if [[ $method == 'delly' ]]
 then
-    mkdir temp
     module load  delly2/v0.7.7-multi
     if [[ -n ${normal} ]]
     then
@@ -105,10 +105,17 @@ then
     else
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
-    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.unfiltered.vcf
-    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba -v svaba.unfiltered.vcf -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.norm.vcf | bgzip > svaba.vcf.gz
-    
+    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.sv.vcf
+    cat svaba.sv.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.vcf.gz
+    tabix svaba.sv.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v svaba.sv.vcf.gz -s
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf | bgzip > ${pair_id}.svaba.sv.vcf.gz
+    vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.indel.vcf
+    cat svaba.indel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.indel.vcf.gz
+    tabix svaba.indel.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v svaba.indel.vcf.gz -s
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf | bgzip > ${pair_id}.svaba.vcf.gz
+
 fi
 
 if [[ $method == 'lumpy' ]]

@@ -59,12 +59,12 @@ if [[ $nuctype == 'dna' ]]; then
 	samtools view -@ $NPROC -b -L ${bed} -o ${pair_id}.ontarget.bam ${sbam}
 	samtools index -@ $NPROC ${pair_id}.ontarget.bam
 	samtools flagstat  ${pair_id}.ontarget.bam > ${pair_id}.ontarget.flagstat.txt
-	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt --TMP_DIR=${tmpdir}
-	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$NPROC -jar $PICARD/picard.jar EstimateLibraryComplexity I=${sbam} OUTPUT=${pair_id}.libcomplex.txt --TMP_DIR=${tmpdir}
+	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt TMP_DIR=${tmpdir}
+	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$NPROC -jar $PICARD/picard.jar EstimateLibraryComplexity I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
 	samtools view  -@ $NPROC -b -q 1 ${sbam} | bedtools coverage -sorted -hist -g ${index_path}/genomefile.txt -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
 	samtools view  -@ $NPROC ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     fi
-    java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt --TMP_DIR=${tmpdir}
+    java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt TMP_DIR=${tmpdir}
     bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a ${bed} -b ${sbam} -hist > ${pair_id}.covhist.txt
     grep ^all ${pair_id}.covhist.txt >  ${pair_id}.genomecov.txt
     perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt

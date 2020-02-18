@@ -71,9 +71,9 @@ elif [ $algo == 'fgbio_umi' ]
 then
     module load fgbio bwakit/0.7.15 bwa/intel/0.7.17 samtools/gcc/1.8
     samtools index -@ $NPROC ${sbam}
-    fgbio --tmp-dir ./ GroupReadsByUmi -s identity -i ${sbam} -o ${pair_id}.group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
-    fgbio --tmp-dir ./ CallMolecularConsensusReads -i ${pair_id}.group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
-    samtools index ${pair_id}.consensus.bam
+    fgbio --tmp-dir ./ GroupReadsByUmi -s identity -i ${sbam} -o group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
+    fgbio --tmp-dir ./ CallMolecularConsensusReads -i group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
+    samtools index -@ $NPROC ${pair_id}.consensus.bam
     samtools fastq -1 ${pair_id}.consensus.R1.fastq -2 ${pair_id}.consensus.R2.fastq ${pair_id}.consensus.bam
     gzip ${pair_id}.consensus.R1.fastq
     gzip ${pair_id}.consensus.R2.fastq
@@ -85,6 +85,8 @@ then
 	samtools view -1 out.sam > ${pair_id}.consensus.bam
     fi
     samtools sort --threads $NPROC -o ${pair_id}.dedup.bam ${pair_id}.consensus.bam
+    samtools sort --threads $NPROC -o ${pair_id}.group.bam group.bam
+    samtools index -@ $NPROC ${pair_id}.group.bam
 else
     cp ${sbam} ${pair_id}.dedup.bam    
 fi
