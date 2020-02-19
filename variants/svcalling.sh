@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:i:x:y:n:l:a:h opt
+while getopts :r:p:b:i:x:y:n:l:f:a:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -22,6 +22,7 @@ do
 	a) method=$OPTARG;;
         x) tid=$OPTARG;;
         y) nid=$OPTARG;;
+	f) filter=1;;
 	l) bed=$OPTARG;;
         h) usage;;
     esac
@@ -96,8 +97,7 @@ then
     bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
     bgzip delly.vcf
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} delly.vcf | bgzip > ${pair_id}.delly.vcf.gz
-fi
-if [[ $method == 'svaba' ]]
+elif [[ $method == 'svaba' ]]
 then
     if [[ -n ${normal} ]]
     then
@@ -105,20 +105,19 @@ then
     else
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
+    #Create SV FILE
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.sv.vcf
     cat svaba.sv.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.vcf.gz
     tabix svaba.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v svaba.sv.vcf.gz -s
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf | bgzip > ${pair_id}.svaba.sv.vcf.gz
+    #Create INDEL FILE
     vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.indel.vcf
     cat svaba.indel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.indel.vcf.gz
     tabix svaba.indel.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v svaba.indel.vcf.gz -s
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf | bgzip > ${pair_id}.svaba.vcf.gz
-
-fi
-
-if [[ $method == 'lumpy' ]]
+elif [[ $method == 'lumpy' ]]
 then
     #MAKE FILES FOR LUMPY
     samtools sort -@ $NPROC -n -o namesort.bam ${sbam}
@@ -137,8 +136,7 @@ then
 	speedseq sv -t $NPROC -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
     fi
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
-fi
-if [[ $method == 'pindel' ]]
+elif [[ $method == 'pindel' ]]
 then
     module load pindel/0.2.5-intel
     genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
@@ -157,12 +155,18 @@ then
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
-fi
-if [[ $method == 'itdseek' ]]
+elif [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
     samtools view -@ $NPROC -L ${bed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
-
+    
     tabix ${pair_id}.itdseek.vcf.gz
     bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+    if [[ $filter == 1 ]]
+    then
+	perl $baseDir/filter_itdseeker.pl -t ${pair_id} -d ${pair_id}.itdseek_tandemdup.vcf.gz
+	mv ${pair_id}.itdseek_tandemdup.vcf.gz ${pair_id}.itdseek_tandemdup.unfilt.vcf.gz
+	mv ${pair_id}.itdseek_tandemdup.pass.vcf ${pair_id}.itdseek_tandemdup.vcf
+	bgzip ${pair_id}.itdseek_tandemdup.vcf
+    fi
 fi

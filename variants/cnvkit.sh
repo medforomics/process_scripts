@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:p:n:t:r:uqh opt
+while getopts :b:p:n:d:t:r:uqh opt
 do
     case $opt in
         b) sbam=$OPTARG;;
@@ -33,6 +33,7 @@ fi
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $sbam ]]
 then
+    "missing pair_id or bam"
     usage
 fi
 NPROC=$SLURM_CPUS_ON_NODE
@@ -42,6 +43,7 @@ then
 fi
 if [[ -z $paneldir ]]
 then
+    echo "missing panel dir"
     usage
 fi
 if [[ -s "${index_path}/genome.fa" ]]

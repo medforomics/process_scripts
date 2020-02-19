@@ -125,7 +125,7 @@ then
   for i in *.bam; do
       bamlist+="-I ${i} "
   done
-  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd`
   gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${pair_id}.mutect.vcf -O ${pair_id}.mutect.filt.vcf
   vcf-sort ${pair_id}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 
@@ -145,7 +145,12 @@ then
     done
     configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
     manta/runWorkflow.py -m local -j $NPROC
-    configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
+    then
+	configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    else
+	configureStrelkaGermlineWorkflow.py $gvcflist --referenceFasta ${reffa} $mode --runDir strelka
+    fi
     strelka/runWorkflow.py -m local -j $NPROC
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.strelka2.vcf.gz strelka/results/variants/variants.vcf.gz
 fi
