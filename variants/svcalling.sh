@@ -64,39 +64,44 @@ mkdir temp
 
 if [[ $method == 'delly' ]]
 then
-    module load  delly2/v0.7.7-multi
+    #module load  delly2/v0.7.7-multi
     if [[ -n ${normal} ]]
     then
 	#RUN DELLY
 	echo -e "${nid}\tcontrol"> samples.tsv
 	echo -e "${tid}\ttumor" >> samples.tsv
-	delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 filter -t BND -o  delly_tra.bcf -f somatic -s samples.tsv delly_translocations.bcf
-	delly2 filter -t DUP -o  delly_dup.bcf -f somatic -s samples.tsv delly_duplications.bcf
-	delly2 filter -t INV -o  delly_inv.bcf -f somatic -s samples.tsv delly_inversions.bcf
-	delly2 filter -t DEL -o  delly_del.bcf -f somatic -s samples.tsv delly_deletion.bcf
-	delly2 filter -t INS -o  delly_ins.bcf -f somatic -s samples.tsv delly_insertion.bcf
+	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
+	#delly2 filter -o ${pair_id}.delly_tra.bcf -f somatic -s samples.tsv ${pair_id}.delly_translocations.bcf
+	#delly2 filter -o ${pair_id}.delly_dup.bcf -f somatic -s samples.tsv ${pair_id}.delly_duplications.bcf
+	#delly2 filter -o ${pair_id}.delly_inv.bcf -f somatic -s samples.tsv ${pair_id}.delly_inversions.bcf
+	#delly2 filter -o ${pair_id}.delly_del.bcf -f somatic -s samples.tsv ${pair_id}.delly_deletion.bcf
+	#delly2 filter -o ${pair_id}.delly_ins.bcf -f somatic -s samples.tsv ${pair_id}.delly_insertion.bcf
     else
 	#RUN DELLY
-	delly2 call -t BND -o delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t DUP -o delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t INV -o delly_inversions.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t DEL -o delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t INS -o delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 filter -t BND -o  delly_tra.bcf -f germline delly_translocations.bcf
-	delly2 filter -t DUP -o  delly_dup.bcf -f germline delly_duplications.bcf
-	delly2 filter -t INV -o  delly_inv.bcf -f germline delly_inversions.bcf
-	delly2 filter -t DEL -o  delly_del.bcf -f germline delly_deletion.bcf
-	delly2 filter -t INS -o  delly_ins.bcf -f germline delly_insertion.bcf
+	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
+	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
+	#delly2 filter -o ${pair_id}.delly_tra.bcf -f germline ${pair_id}.delly_translocations.bcf
+	#delly2 filter -o ${pair_id}.delly_dup.bcf -f germline ${pair_id}.delly_duplications.bcf
+	#delly2 filter -o ${pair_id}.delly_inv.bcf -f germline ${pair_id}.delly_inversions.bcf
+	#delly2 filter -o ${pair_id}.delly_del.bcf -f germline ${pair_id}.delly_deletion.bcf
+	#delly2 filter -o ${pair_id}.delly_ins.bcf -f germline ${pair_id}.delly_insertion.bcf
     fi
     #MERGE DELLY AND MAKE BED
-    bcftools concat -a -O v delly_dup.bcf delly_inv.bcf delly_tra.bcf delly_del.bcf delly_ins.bcf| vcf-sort -t temp > delly.vcf
-    bgzip delly.vcf
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} delly.vcf | bgzip > ${pair_id}.delly.vcf.gz
+
+    bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf | vcf-sort -t temp | bgzip > ${pair_id}.delly.svar.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.sv -v ${pair_id}.delly.svar.vcf.gz -s
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.delly.sv.norm.vcf.gz | bgzip > ${pair_id}.delly.sv.vcf.gz
+    bcftools concat -a -O v ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.dellyindel.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.indel -v ${pair_id}.dellyindel.vcf.gz -s
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.delly.indel.norm.vcf.gz | bgzip > ${pair_id}.delly.vcf.gz
+
 elif [[ $method == 'svaba' ]]
 then
     if [[ -n ${normal} ]]
@@ -107,16 +112,16 @@ then
     fi
     #Create SV FILE
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.sv.vcf
-    cat svaba.sv.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.vcf.gz
-    tabix svaba.sv.vcf.gz
+    bgzip -f svaba.sv.vcf
+    tabix -f svaba.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v svaba.sv.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf | bgzip > ${pair_id}.svaba.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.svaba.sv.vcf.gz
     #Create INDEL FILE
     vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.indel.vcf
-    cat svaba.indel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[0] >= 20 )" | bgzip > svaba.indel.vcf.gz
-    tabix svaba.indel.vcf.gz
+    bgzip -f svaba.indel.vcf
+    tabix -f svaba.indel.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v svaba.indel.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf | bgzip > ${pair_id}.svaba.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.svaba.vcf.gz
 elif [[ $method == 'lumpy' ]]
 then
     #MAKE FILES FOR LUMPY

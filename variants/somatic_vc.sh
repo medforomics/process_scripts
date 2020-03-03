@@ -115,7 +115,7 @@ if [ $algo == 'virmid' ]
     module rm java/oracle/jdk1.7.0_51
     module load snpeff/4.3q
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
-elif [ $algo == 'mutect2' ]
+elif [ $algo == 'mutect' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
   module load gatk/4.1.4.0 picard/2.10.3 snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14

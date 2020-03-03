@@ -82,7 +82,7 @@ then
     vcf-annotate -n --fill-type ${pair_id}.vcf.gz | bcftools norm -c s -f ${reffa} -w 10 -O v -o sam.vcf
     java -jar $PICARD/picard.jar SortVcf I=sam.vcf O=${pair_id}.sam.vcf R=${reffa} CREATE_INDEX=TRUE
     bgzip ${pair_id}.sam.vcf
-elif [[ $algo == 'freebayes' ]]
+elif [[ $algo == 'fb' ]]
 then
     module load freebayes/gcc/1.2.0 parallel/20150122
     bamlist=''
@@ -90,7 +90,7 @@ then
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
     cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $NPROC "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
-    vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.freebayes.vcf.gz -
+    vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.fb.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then
     module load platypus/gcc/0.8.1
@@ -117,7 +117,7 @@ then
     gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
     bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
-elif [ $algo == 'mutect2' ]
+elif [ $algo == 'mutect' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
   module load gatk/4.1.4.0
