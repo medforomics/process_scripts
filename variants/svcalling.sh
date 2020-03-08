@@ -93,7 +93,7 @@ then
     if [[ $filter == 1 ]]
     then
 	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
-	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.delly.genefusion.txt
+	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.delly.genefusion.txt
        fi
 elif [[ $method == 'svaba' ]]
 then
@@ -104,16 +104,19 @@ then
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
     #Create SV FILE
-    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.sv.vcf
-    bgzip -f svaba.sv.vcf
-    tabix -f svaba.sv.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v svaba.sv.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20)" | bgzip > ${pair_id}.svaba.vcf.gz
+    bgzip -f ${pair_id}.svaba.unfiltered.sv.vcf
+    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v ${pair_id}.svaba.unfiltered.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20)" | bgzip > ${pair_id}.svaba.sv.vcf.gz
+
+    java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" ${pair_id}.svaba.unfiltered.indel.vcf |bgzip > ${pair_id}.svaba.indel.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v ${pair_id}.svaba.indel.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf.gz | bgzip > ${pair_id}.svaba.vcf.gz
+
 
     if [[ $filter == 1 ]]
     then
-	zgrep '#CHROM' ${pair_id}.svaba.vcf.gz > ${pair_id}.svaba.genefusion.txt
-	zcat ${pair_id}.svaba.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  >> ${pair_id}.svaba.genefusion.txt
+	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
+	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  >> ${pair_id}.svaba.genefusion.txt
        fi
 elif [[ $method == 'lumpy' ]]
 then
@@ -165,7 +168,7 @@ then
 	mv ${pair_id}.pindel.sv.pass.vcf ${pair_id}.pindel.sv.vcf
 	bgzip ${pair_id}.pindel.sv.vcf
 	zgrep '#CHROM' ${pair_id}.pindel.sv.vcf.gz > ${pair_id}.pindel.genefusion.txt
-	zcat ${pair_id}.pindel.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHROM END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.pindel.genefusion.txt
+	zcat ${pair_id}.pindel.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHROM END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE  FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.pindel.genefusion.txt
     fi
 elif [[ $method == 'itdseek' ]]
 then

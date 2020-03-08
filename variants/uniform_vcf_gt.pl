@@ -26,7 +26,16 @@ while (my $line = <VCF>) {
     foreach $a (split(/;/,$annot)) {
 	my ($key,$val) = split(/=/,$a);
 	$hash{$key} = $val;
-	}
+    }
+    if ($alt =~ m/^chr/) {
+	$chr2 =~ m/(chr\w+):(\d+)/;
+	$chr2=$1;
+	$p2 = $2;
+	$hash{CHR2} = $chr2;
+	$hash{'END'} = $p2;
+	$annot .= ";CHR2=$chr2;END=$p2";
+    }
+
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my @newgts = ();
