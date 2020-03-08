@@ -64,7 +64,7 @@ while (my $line = <VCF>) {
 	$gtdata{DP} += $_;
       }
     }
-    if (($gtdata{DP} && $gtdata{DP} < 10) || ()) {
+    if (($gtdata{DP} && $gtdata{DP} < 20) || ()) {
       $missingGT ++;
     } if ($gtdata{DP} == 0 || $gtdata{GT} eq './.') {
       push @newgts, '.:.:.:.:.';
@@ -79,7 +79,7 @@ while (my $line = <VCF>) {
   if ($hash{SVTYPE} eq 'DUP:TANDEM') {
     print DUP join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
   }elsif ($hash{SVTYPE} eq 'DEL' || $hash{SVTYPE} eq 'INS') {
-    if (abs($hash{SVLEN}) < 100) {
+    if (abs($hash{SVLEN}) < 30) {
       print SI join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$annot,$newformat,@newgts),"\n";
     }else {
       $newalt = "<".$hash{SVTYPE}.">";

@@ -76,10 +76,6 @@ then
 	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
 	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
 	#delly2 filter -o ${pair_id}.delly_tra.bcf -f somatic -s samples.tsv ${pair_id}.delly_translocations.bcf
-	#delly2 filter -o ${pair_id}.delly_dup.bcf -f somatic -s samples.tsv ${pair_id}.delly_duplications.bcf
-	#delly2 filter -o ${pair_id}.delly_inv.bcf -f somatic -s samples.tsv ${pair_id}.delly_inversions.bcf
-	#delly2 filter -o ${pair_id}.delly_del.bcf -f somatic -s samples.tsv ${pair_id}.delly_deletion.bcf
-	#delly2 filter -o ${pair_id}.delly_ins.bcf -f somatic -s samples.tsv ${pair_id}.delly_insertion.bcf
     else
 	#RUN DELLY
 	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
@@ -88,20 +84,17 @@ then
 	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
 	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
 	#delly2 filter -o ${pair_id}.delly_tra.bcf -f germline ${pair_id}.delly_translocations.bcf
-	#delly2 filter -o ${pair_id}.delly_dup.bcf -f germline ${pair_id}.delly_duplications.bcf
-	#delly2 filter -o ${pair_id}.delly_inv.bcf -f germline ${pair_id}.delly_inversions.bcf
-	#delly2 filter -o ${pair_id}.delly_del.bcf -f germline ${pair_id}.delly_deletion.bcf
-	#delly2 filter -o ${pair_id}.delly_ins.bcf -f germline ${pair_id}.delly_insertion.bcf
     fi
     #MERGE DELLY AND MAKE BED
 
-    bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf | vcf-sort -t temp | bgzip > ${pair_id}.delly.svar.vcf.gz
+    bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.delly.svar.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.sv -v ${pair_id}.delly.svar.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.delly.sv.norm.vcf.gz | bgzip > ${pair_id}.delly.sv.vcf.gz
-    bcftools concat -a -O v ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.dellyindel.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.indel -v ${pair_id}.dellyindel.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.delly.indel.norm.vcf.gz | bgzip > ${pair_id}.delly.vcf.gz
-
+    java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 )" ${pair_id}.delly.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.delly.vcf.gz
+    if [[ $filter == 1 ]]
+    then
+	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
+	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.delly.genefusion.txt
+       fi
 elif [[ $method == 'svaba' ]]
 then
     if [[ -n ${normal} ]]
@@ -111,17 +104,17 @@ then
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
     #Create SV FILE
-    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | vcf-sort -t temp > svaba.sv.vcf
+    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.sv.vcf
     bgzip -f svaba.sv.vcf
     tabix -f svaba.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v svaba.sv.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.svaba.sv.vcf.gz
-    #Create INDEL FILE
-    vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | vcf-sort -t temp > svaba.indel.vcf
-    bgzip -f svaba.indel.vcf
-    tabix -f svaba.indel.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v svaba.indel.vcf.gz -s
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 20 )" | bgzip > ${pair_id}.svaba.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20)" | bgzip > ${pair_id}.svaba.vcf.gz
+
+    if [[ $filter == 1 ]]
+    then
+	zgrep '#CHROM' ${pair_id}.svaba.vcf.gz > ${pair_id}.svaba.genefusion.txt
+	zcat ${pair_id}.svaba.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  >> ${pair_id}.svaba.genefusion.txt
+       fi
 elif [[ $method == 'lumpy' ]]
 then
     #MAKE FILES FOR LUMPY
@@ -160,6 +153,20 @@ then
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+    if [[ $filter == 1 ]]
+    then
+	perl $baseDir/process_scripts/variants/filter_pindel.pl -d ${pair_id}.pindel_tandemdup.vcf.gz -s ${pair_id}.pindel_sv.vcf.gz -i ${pair_id}.pindel_indel.vcf.gz
+	mv ${pair_id}x.pindel_tandemdup.vcf.gz ${pair_id}.pindel_tandemdup.unfilt.vcf.gz
+	mv ${pair_id}.pindel_tandemdup.pass.vcf ${pair_id}.pindel_tandemdup.vcf
+	bgzip ${pair_id}.pindel_tandemdup.vcf
+	mv ${pair_id}.pindel_indel.pass.vcf ${pair_id}.pindel.vcf
+	bgzip ${pair_id}.pindel.vcf
+	mv ${pair_id}.pindel.sv.vcf.gz ${pair_id}.pindel.sv.unfilt.vcf.gz
+	mv ${pair_id}.pindel.sv.pass.vcf ${pair_id}.pindel.sv.vcf
+	bgzip ${pair_id}.pindel.sv.vcf
+	zgrep '#CHROM' ${pair_id}.pindel.sv.vcf.gz > ${pair_id}.pindel.genefusion.txt
+	zcat ${pair_id}.pindel.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHROM END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE ANN[*].FEATUREID FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.pindel.genefusion.txt
+    fi
 elif [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
