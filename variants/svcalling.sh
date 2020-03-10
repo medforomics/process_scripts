@@ -104,14 +104,13 @@ then
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
     fi
     #Create SV FILE
-    bgzip -f ${pair_id}.svaba.unfiltered.sv.vcf
+    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.svaba.unfiltered.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v ${pair_id}.svaba.unfiltered.sv.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20)" | bgzip > ${pair_id}.svaba.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD >= 20)" | bgzip > ${pair_id}.svaba.sv.vcf.gz
 
-    java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" ${pair_id}.svaba.unfiltered.indel.vcf |bgzip > ${pair_id}.svaba.indel.vcf.gz
+    vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort | java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" - |bgzip > ${pair_id}.svaba.indel.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v ${pair_id}.svaba.indel.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf.gz | bgzip > ${pair_id}.svaba.vcf.gz
-
 
     if [[ $filter == 1 ]]
     then

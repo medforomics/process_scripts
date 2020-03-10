@@ -58,12 +58,15 @@ while (my $line = <VCF>) {
 	  foreach (@alts) {
 	      $gtdata{DP} += $_;
 	  }
+      } elsif ($gtdata{AD} =~ m/^\d+$/){
+	  $gtdata{AO} = $gtdata{AD};
+	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       } elsif (exists $gtdata{DV} && exists $gtdata{RV}) {
 	  $gtdata{AO} = $gtdata{DV} + $gtdata{RV};
 	  $gtdata{RO} = $gtdata{DR} + $gtdata{RR};
 	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
 	  $gtdata{DP} = $gtdata{RO}+$gtdata{AO};
-	  
       } elsif (exists $gtdata{DR} && exists $gtdata{SR}){
 	  $gtdata{AO} = $gtdata{AD};
 	  $gtdata{DP} = $gtdata{AO} unless $gtdata{DP};
