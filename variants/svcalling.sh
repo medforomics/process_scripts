@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:i:x:y:n:l:f:a:h opt
+while getopts :r:p:b:i:x:y:n:l:a:hf opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -60,7 +60,7 @@ fi
 source /etc/profile.d/modules.sh	
 module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
-mkdir temp
+mkdir -p temp
 
 if [[ $method == 'delly' ]]
 then
@@ -106,7 +106,7 @@ then
     #Create SV FILE
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.svaba.unfiltered.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v ${pair_id}.svaba.unfiltered.sv.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD >= 20)" | bgzip > ${pair_id}.svaba.sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AO >= 20)" | bgzip > ${pair_id}.svaba.sv.vcf.gz
 
     vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort | java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" - |bgzip > ${pair_id}.svaba.indel.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v ${pair_id}.svaba.indel.vcf.gz
