@@ -77,6 +77,7 @@ then
 	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
 	#delly2 filter -o ${pair_id}.delly_tra.bcf -f somatic -s samples.tsv ${pair_id}.delly_translocations.bcf
     else
+	$tid=
 	#RUN DELLY
 	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
 	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
@@ -94,6 +95,10 @@ then
     then
 	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
 	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.delly.genefusion.txt
+	mv ${pair_id}.delly.vcf.gz ${pair_id}.delly.ori.vcf.gz
+	bash $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz
+	bgzip ${pair_id}.delly.vcf
+	cat ${pair_id}.potentialfusion.txt >> ${pair_id}.delly.genefusion.txt
        fi
 elif [[ $method == 'svaba' ]]
 then
@@ -116,6 +121,10 @@ then
     then
 	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
 	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  >> ${pair_id}.svaba.genefusion.txt
+	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
+	bash $baseDir/filter_svaba.pl -t $tid -p $pair_id -i ${pair_id}.svaba.ori.vcf.gz
+	bgzip ${pair_id}.svaba.vcf
+	cat ${pair_id}.potentialfusion.txt >> ${pair_id}.svaba.genefusion.txt
        fi
 elif [[ $method == 'lumpy' ]]
 then
