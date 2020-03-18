@@ -157,8 +157,8 @@ then
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
     if [[ $filter == 1 ]]
     then
-	perl $baseDir/process_scripts/variants/filter_pindel.pl -d ${pair_id}.pindel_tandemdup.vcf.gz -s ${pair_id}.pindel_sv.vcf.gz -i ${pair_id}.pindel_indel.vcf.gz
-	mv ${pair_id}x.pindel_tandemdup.vcf.gz ${pair_id}.pindel_tandemdup.unfilt.vcf.gz
+	perl $baseDir/filter_pindel.pl -d ${pair_id}.pindel_tandemdup.vcf.gz -s ${pair_id}.pindel_sv.vcf.gz -i ${pair_id}.pindel_indel.vcf.gz
+	mv ${pair_id}.pindel_tandemdup.vcf.gz ${pair_id}.pindel_tandemdup.unfilt.vcf.gz
 	mv ${pair_id}.pindel_tandemdup.pass.vcf ${pair_id}.pindel_tandemdup.vcf
 	bgzip ${pair_id}.pindel_tandemdup.vcf
 	mv ${pair_id}.pindel_indel.pass.vcf ${pair_id}.pindel.vcf
