@@ -110,7 +110,7 @@ W1:while (my $line = <IN>) {
   my $newannot = join(";",@nannot);
   if ($hash{SVTYPE} eq 'INS' || ($hash{SVTYPE} eq 'DEL' && $keepforvcf !~ m/&/)) {
     if ($filter =~ m/LOWMAPQ|LowQual/i) {
-      $filter = 'FailedQC'.$filter;
+      $filter = 'FailedQC;'.$filter;
     }
     print VCFOUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$newannot,
 		      $format,@gts),"\n";

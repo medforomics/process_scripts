@@ -99,6 +99,9 @@ W1:while (my $line = <IN>) {
     }
   }
   my $newannot = join(";",@nannot);
+  if ($filter ne 'PASS') {
+    $filter = 'FailedQC;'.$filter;
+  }
   if ($hash{SVTYPE} eq 'INS' || ($hash{SVTYPE} eq 'DEL' && $keepforvcf !~ m/&/)) {
     print VCFOUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$newannot,
 		      $format,@gts),"\n";
@@ -106,6 +109,7 @@ W1:while (my $line = <IN>) {
     my ($allele,$effect,$impact,$gene,$geneid,$feature,
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$keeptrx);
+    
     print DELFUS join("\t",$chrom,$pos,$hash{CHR2},$hash{END},$effect,$gene,$biotype,$filter,$format,@gts),"\n";
   }
 }

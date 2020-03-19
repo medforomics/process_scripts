@@ -96,12 +96,12 @@ then
 	then
 	    tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 	fi
-	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
-	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u >> ${pair_id}.dgf.txt
+	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u > ${pair_id}.dgf.txt
 	mv ${pair_id}.delly.vcf.gz ${pair_id}.delly.ori.vcf.gz
 	perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz
-	bgzip ${pair_id}.delly.vcf
-	cat ${pair_id}.delly.potentialfusion.txt  ${pair_id}.dgf.txt |sort -u > ${pair_id}.delly.genefusion.txt
+	bgzip -f ${pair_id}.delly.vcf
+	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
+	cat ${pair_id}.delly.potentialfusion.txt  ${pair_id}.dgf.txt |sort -u >> ${pair_id}.delly.genefusion.txt
     fi
 elif [[ $method == 'svaba' ]]
 then
@@ -122,11 +122,11 @@ then
 
     if [[ $filter == 1 ]]
     then
-	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
 	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  > ${pair_id}.sgf.txt
 	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
 	perl $baseDir/filter_svaba.pl -t $tid -p $pair_id -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
 	bgzip ${pair_id}.svaba.vcf
+	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
 	cat ${pair_id}.svaba.potentialfusion.txt ${pair_id}.sgf.txt | sort -u >> ${pair_id}.svaba.genefusion.txt
        fi
 elif [[ $method == 'lumpy' ]]
