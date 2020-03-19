@@ -27,15 +27,19 @@ while (my $line = <VCF>) {
 	my ($key,$val) = split(/=/,$a);
 	$hash{$key} = $val;
     }
-    if ($alt =~ m/^chr/) {
-	$chr2 =~ m/(chr\w+):(\d+)/;
-	$chr2=$1;
+    if ($alt =~ m/chr(\w+):(\d+)/i) {
+	$chr2='chr'.$1;
 	$p2 = $2;
 	$hash{CHR2} = $chr2;
 	$hash{'END'} = $p2;
 	$annot .= ";CHR2=$chr2;END=$p2";
+    }elsif ($alt =~ m/CHR(\w+):(\d+)/i) {
+	$chr2='chr'.$1;
+	$p2 = $2;
+	$hash{CHR2} = 'chr'.$1;
+	$hash{END} = $2;
+	$annot .= ";CHR2=$chr2;END=$p2";
     }
-
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my @newgts = ();
@@ -61,6 +65,10 @@ while (my $line = <VCF>) {
       } elsif ($gtdata{AD} =~ m/^\d+$/){
 	  $gtdata{AO} = $gtdata{AD};
 	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  if ($gtdata{RO} < 0) {
+	      $gtdata{DP} +=  $gtdata{AO};
+	      $gtdata{RO} = $gtdata{DP} -  $gtdata{AO};
+	  }
 	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       } elsif (exists $gtdata{DV} && exists $gtdata{RV}) {
 	  $gtdata{AO} = $gtdata{DV} + $gtdata{RV};

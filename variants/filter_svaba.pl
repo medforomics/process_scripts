@@ -114,7 +114,7 @@ W1:while (my $line = <IN>) {
     }
     print VCFOUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$newannot,
 		      $format,@gts),"\n";
-  }elsif ($hash{SVTYPE} eq 'DEL' && $hash{SPAN} && $hash{SPAN} > 9999) {
+  } elsif ($hash{SVTYPE} eq 'DEL' && $hash{SPAN} && $hash{SPAN} > 9999) {
     my ($allele,$effect,$impact,$gene,$geneid,$feature,
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$keeptrx);
@@ -230,6 +230,9 @@ close IN;
 
 
 foreach my $id (keys %svpairs) {
+  if ($id =~ m/815016443/) {
+      warn "debugging\n";
+  }
   my $alt1 = $svpairs{$id}{1}{alt};
   my $alt2 = $svpairs{$id}{2}{alt};
   my $svtype;
@@ -237,8 +240,10 @@ foreach my $id (keys %svpairs) {
     $svtype = 'DEL';
   }elsif ($alt2 =~ m/^\w\[/ && $alt1 =~ m/^\]/) {
     $svtype = 'INS';
+  }else {
+      $svtype = 'UNK';
   }
-   if ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/)) {
+   if ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/ && $svpairs{$id}{1}{span} < 9999)) {
      if ($filter =~ m/LOWMAPQ|LowQual/i) {
       $filter = 'FailedQC'.$filter;
     }
