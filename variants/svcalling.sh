@@ -125,7 +125,7 @@ then
 	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
 	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  >> ${pair_id}.sgf.txt
 	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
-	perl $baseDir/filter_svaba.pl -t $tid -p $pair_id -i ${pair_id}.svaba.ori.vcf.gz -v
+	perl $baseDir/filter_svaba.pl -t $tid -p $pair_id -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
 	bgzip ${pair_id}.svaba.vcf
 	cat ${pair_id}.svaba.potentialfusion.txt ${pair_id}.sgf.txt | sort -u >> ${pair_id}.svaba.genefusion.txt
        fi
