@@ -15,7 +15,7 @@ W1:while (my $line = <IN>) {
   chomp($line);
   if ($line =~ m/^#/) {
     if ($line =~ m/^#CHROM/) {
-      print OUT "##INFO=<ID=AF,Number=A,Type=Integer,Description=\"Alternate allele observation frequency\">\n";
+      print VCFOUT "##INFO=<ID=AF,Number=A,Type=Integer,Description=\"Alternate allele observation frequency\">\n";
       my @header = split(/\t/,$line);
       ($chrom, $pos,$id,$ref,$alt,$score,
        $filter,$info,$format,@gtheader) = split(/\t/, $line);
@@ -29,6 +29,7 @@ W1:while (my $line = <IN>) {
       }
     }
     print VCFOUT $line,"\n";
+    next;
   }
   my ($chrom, $pos,$id,$ref,$alt,$score,
       $filter,$annot,$format,@gts) = split(/\t/, $line);
