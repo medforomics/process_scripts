@@ -62,6 +62,11 @@ module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snp
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 mkdir -p temp
 
+if [[ -z $tid ]]
+then
+    tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+fi
+
 if [[ $method == 'delly' ]]
 then
     #module load  delly2/v0.7.7-multi
@@ -92,10 +97,6 @@ then
     java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 )" ${pair_id}.delly.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.delly.vcf.gz
     if [[ $filter == 1 ]]
     then
-	if [[ -z $tid ]]
-	then
-	    tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
-	fi
 	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u > ${pair_id}.dgf.txt
 	mv ${pair_id}.delly.vcf.gz ${pair_id}.delly.ori.vcf.gz
 	perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz
@@ -124,7 +125,7 @@ then
     then
 	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  > ${pair_id}.sgf.txt
 	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
-	perl $baseDir/filter_svaba.pl -t $tid -p $pair_id -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
+	perl $baseDir/filter_svaba.pl -t $tid -p ${pair_id} -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
 	bgzip ${pair_id}.svaba.vcf
 	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
 	cat ${pair_id}.svaba.potentialfusion.txt ${pair_id}.sgf.txt | sort -u >> ${pair_id}.svaba.genefusion.txt
@@ -166,10 +167,10 @@ then
     perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel.sv.vcf.gz
     if [[ $filter == 1 ]]
     then
-	perl $baseDir/filter_pindel.pl -d ${pair_id}.pindel_tandemdup.vcf.gz -s ${pair_id}.pindel_sv.vcf.gz -i ${pair_id}.pindel_indel.vcf.gz
+	perl $baseDir/filter_pindel.pl -d ${pair_id}.pindel_tandemdup.vcf.gz -s ${pair_id}.pindel.sv.vcf.gz -i ${pair_id}.pindel_indel.vcf.gz
 	mv ${pair_id}.pindel_tandemdup.vcf.gz ${pair_id}.pindel_tandemdup.unfilt.vcf.gz
 	mv ${pair_id}.pindel_tandemdup.pass.vcf ${pair_id}.pindel_tandemdup.vcf
 	bgzip ${pair_id}.pindel_tandemdup.vcf
