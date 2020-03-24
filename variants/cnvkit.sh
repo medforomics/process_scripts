@@ -83,24 +83,31 @@ echo "${targets}targets.bed"
 echo "${targets}antitargets.bed"
 echo "${normals}"
 
+numsnps=`grep -c -P "rs[0-9]+" ${targets}targets.bed`
+panelsize=`awk '{ sum+=$3-$2} END {print sum}' ${targets}targets.bed`
+
 unset DISPLAY
 
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
-cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
-
-numsnps=`grep -c -P "rs[0-9]+" ${targets}targets.bed`
-
-if [[ $numsnps > 100 ]]
+if [[ $panelsize -gt 4000000 ]]
 then
-    samtools index ${sbam}
-    java -jar /cm/shared/apps/gatk/3.8/target/package/GenomeAnalysisTK.jar -T UnifiedGenotyper -R ${reffa} --output_mode EMIT_ALL_SITES -L ${index_path}/IDT_snps.hg38.bed -o common_variants.vcf -glm BOTH -dcov 10000 -I ${sbam}
+    cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
+else
+    cnvkit.py segment -m haar ${pair_id}.cnr -o ${pair_id}.cns
+fi
+
+if [[ $numsnps -gt 100 ]]
+then
+    #samtools index ${sbam}
+    #java -jar /cm/shared/apps/gatk/3.8/target/package/GenomeAnalysisTK.jar -T UnifiedGenotyper -R ${reffa} --output_mode EMIT_ALL_SITES -L ${index_path}/IDT_snps.hg38.bed -o common_variants.vcf -glm BOTH -dcov 10000 -I ${sbam}
+    bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -a INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR -T ${index_path}/IDT_snps.hg38.bed ${sbam} | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o common_variants.vcf
     $baseDir/formatVcfCNV.pl cnvkit_common common_variants.vcf
     echo -e "CHROM\tPOS\tAO\tRO\tDP\tMAF" > ${pair_id}.ballelefreq.txt
     java -jar $SNPEFF_HOME/SnpSift.jar extractFields cnvkit_common.vcf CHROM POS GEN[0].AO GEN[0].RO GEN[0].DP |grep -v CHROM | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$3/$5}' >>  ${pair_id}.ballelefreq.txt
     
-    cnvkit.py call --filter cn ${pair_id}.cns -v cnvkit_common.vcf -o ${pair_id}.call.cns
+    cnvkit.py call --filter cn ${pair_id}.cns -v cnvkit_common.vcf -o ${pair_id}.call.cns 
     cnvkit.py scatter ${pair_id}.cnr -s ${pair_id}.call.cns -t --segment-color "blue" -o ${pair_id}.cnv.scatter.pdf -v cnvkit_common.vcf 
     
 else 

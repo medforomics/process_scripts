@@ -34,6 +34,7 @@ W1:while (my $line = <IN>) {
   my ($chrom, $pos,$id,$ref,$alt,$score,
       $filter,$annot,$format,@gts) = split(/\t/, $line);
   next if ($ref =~ m/\./ || $alt =~ m/\./ || $alt=~ m/,X/);
+  next unless ($chrom =~ m/^chr\d+$/ || $chrom eq 'chrX' || $chrom eq 'chrY');
   my %hash = ();
   foreach $a (split(/;/,$annot)) {
     my ($key,$val) = split(/=/,$a);

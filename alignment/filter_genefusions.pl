@@ -50,7 +50,7 @@ foreach $efile (@exonfiles) {
 
 open OAS, ">$opt{prefix}\.translocations.answer.txt" or die $!;
 
-print OAS join("\t","FusionName","LeftGene","LefttBreakpoint","LeftGeneExons","LeftStrand",
+print OAS join("\t","FusionName","LeftGene","LeftBreakpoint","LeftGeneExons","LeftStrand",
 	       "RightGene","RightBreakpoint","RightGeneExons","RightStrand",
 	       "RNAReads","DNAReads","FusionType","Annot",'Filter','ChrType','ChrDistance'),"\n";
 

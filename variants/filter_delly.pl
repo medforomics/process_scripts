@@ -4,7 +4,7 @@
 #module load vcftools/0.1.14 samtools/1.6 bedtools/2.26.0 
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
-my $results = GetOptions (\%opt,'in|i=s','pid|p=s','tumor|t=s');
+my $results = GetOptions (\%opt,'in|i=s','pid|p=s','tumor|t=s','normal|n');
 
 open VCFOUT, ">$opt{pid}\.delly.vcf" or die $!;
 open DELFUS, ">$opt{pid}\.delly.potentialfusion.txt" or die $!;
@@ -27,6 +27,12 @@ W1:while (my $line = <IN>) {
 	  $opt{tumor} = $gtheader[0];
 	}
       }
+      unless ($opt{normal}) {
+	if (grep(/N_DNA/,@gtheader)) {
+	  my @tsamps = grep(/N_DNA/,@gtheader);
+	  $opt{tumor} = $tsamps[0];
+	}
+      }
     }
     print VCFOUT $line,"\n";
     next;
@@ -34,6 +40,7 @@ W1:while (my $line = <IN>) {
   my ($chrom, $pos,$id,$ref,$alt,$score,
       $filter,$annot,$format,@gts) = split(/\t/, $line);
   next if ($ref =~ m/\./ || $alt =~ m/\./ || $alt=~ m/,X/);
+  next unless ($chrom =~ m/^chr\d+$/ || $chrom eq 'chrX' || $chrom eq 'chrY');
   my %hash = ();
   foreach $a (split(/;/,$annot)) {
     my ($key,$val) = split(/=/,$a);
