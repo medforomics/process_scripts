@@ -126,8 +126,8 @@ then
       bamlist+="-I ${i} "
   done
   gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd`
-  gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${pair_id}.mutect.vcf -O ${pair_id}.mutect.filt.vcf
-  vcf-sort ${pair_id}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+  #gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${pair_id}.mutect.vcf -O ${pair_id}.mutect.filt.vcf
+  vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 
 elif [[ $algo == 'strelka2' ]]
 then
