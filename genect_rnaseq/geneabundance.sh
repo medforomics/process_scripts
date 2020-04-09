@@ -41,7 +41,7 @@ source /etc/profile.d/modules.sh
 module load subread/1.6.1
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
-featureCounts -s $stranded -M --fraction -J --ignoreDup -T $SLURM_CPUS_ON_NODE -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
+featureCounts -s $stranded -M --fraction -J --ignoreDup -T $SLURM_CPUS_ON_NODE -t exon -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
 mkdir ${pair_id}_stringtie
 cd ${pair_id}_stringtie
 stringtie ../${sbam} -p $SLURM_CPUS_ON_NODE -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
