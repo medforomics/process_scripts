@@ -26,7 +26,20 @@ while (my $line = <VCF>) {
     foreach $a (split(/;/,$annot)) {
 	my ($key,$val) = split(/=/,$a);
 	$hash{$key} = $val;
-	}
+    }
+    if ($alt =~ m/chr(\w+):(\d+)/i) {
+	$chr2='chr'.$1;
+	$p2 = $2;
+	$hash{CHR2} = $chr2;
+	$hash{'END'} = $p2;
+	$annot .= ";CHR2=$chr2;END=$p2";
+    }elsif ($alt =~ m/CHR(\w+):(\d+)/i) {
+	$chr2='chr'.$1;
+	$p2 = $2;
+	$hash{CHR2} = 'chr'.$1;
+	$hash{END} = $2;
+	$annot .= ";CHR2=$chr2;END=$p2";
+    }
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my @newgts = ();
@@ -42,17 +55,39 @@ while (my $line = <VCF>) {
       foreach my $i (0..$#deschead) {
 	  $gtdata{$deschead[$i]} = $gtinfo[$i];
       }
-      if ($gtdata{AD}){
+      if ($gtdata{AD} =~ m/\d+,\d+/){
 	  ($gtdata{RO},@alts) = split(/,/,$gtdata{AD});
 	  $gtdata{AO} = join(",",@alts);
 	  $gtdata{DP} = $gtdata{RO};
 	  foreach (@alts) {
 	      $gtdata{DP} += $_;
 	  }
+      } elsif ($gtdata{AD} =~ m/^\d+$/){
+	  $gtdata{AO} = $gtdata{AD};
+	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  if ($gtdata{RO} < 0) {
+	      $gtdata{DP} +=  $gtdata{AO};
+	      $gtdata{RO} = $gtdata{DP} -  $gtdata{AO};
+	  }
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
+      } elsif (exists $gtdata{DV} && exists $gtdata{RV}) {
+	  $gtdata{AO} = $gtdata{DV} + $gtdata{RV};
+	  $gtdata{RO} = $gtdata{DR} + $gtdata{RR};
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
+	  $gtdata{DP} = $gtdata{RO}+$gtdata{AO};
+      } elsif (exists $gtdata{DR} && exists $gtdata{SR}){
+	  $gtdata{AO} = $gtdata{AD};
+	  $gtdata{DP} = $gtdata{AO} unless $gtdata{DP};
+	  if  ($gtdata{DP} > $gtdata{AD}) {
+	      $gtdata{RO} = $gtdata{DP} - $gtdata{AD};
+	  } else {
+	      $gtdata{RO} = 0;
+	  }
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       } elsif (exists $gtdata{NR} && exists $gtdata{NV}) {
-	      $gtdata{DP} = $gtdata{NR}; 	
-	      $gtdata{AO} = $gtdata{NV};
-	      $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  $gtdata{DP} = $gtdata{NR}; 	
+	  $gtdata{AO} = $gtdata{NV};
+	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
       } elsif (exists $gtdata{AO} && exists $gtdata{RO}) {
 	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
 	  $gtdata{DP} = $gtdata{RO};

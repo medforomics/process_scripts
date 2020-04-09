@@ -3,7 +3,7 @@
 
 my $headerfile = shift @ARGV;
 my @vcffiles = @ARGV;
-my @callers = ('fb','mutect','gatk','platypus','strelka2','shimmer','virmid');
+my @callers = ('fb','mutect','gatk','platypus','strelka2','shimmer','pindel','svaba');
 %algos = map {$_=>1} @callers;
 
 open HEADER, "<$headerfile" or die $!;

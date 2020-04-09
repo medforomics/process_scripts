@@ -33,9 +33,10 @@ if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
 
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 if [[ -z $read_group ]]
@@ -43,7 +44,12 @@ then
     read_group=$pair_id
 fi
 
-testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+if [[ $index_path == *project* ]]
+then
+    testexe='/project/shared/bicf_workflow_ref/seqprg/bin'
+else
+    testexe='/usr/local/bin'
+fi
 
 source /etc/profile.d/modules.sh
 module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
@@ -51,25 +57,22 @@ module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
 baseDir="`dirname \"$0\"`"
 
 diff $fq1 $fq2 > difffile
-if [[ $aligner == 'bwa' ]]
+module load bwa/intel/0.7.17
+
+
+if [ -s difffile ]
 then
-    module load bwa/intel/0.7.17
-    if [ -s difffile ]
-	then
-    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} ${fq2} > out.sam
-	else
-    	bwa mem -M -t $SLURM_CPUS_ON_NODE -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa ${fq1} > out.sam
-	fi
-elif [[ $aligner == 'hisat2' ]]
-then
-	module load hisat2/2.1.0-intel
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt		
+    file_opt="${fq1} ${fq2}"
+else
+    file_opt="${fq1}"
 fi
 
-if [[ $umi == 'umi' ]] && [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
+bwa mem -M -t $NPROC -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa $file_opt > out.sam
+
+if [[ $umi == 'umi' ]] && [[ -f "${index_path}/genome.fa.alt" ]]
 then
     k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | python ${baseDir}/add_umi_sam.py -s - -o output.unsort.bam
-elif [[ $index_path == '/project/shared/bicf_workflow_ref/human/GRCh38' ]]
+elif [[ -f "${index_path}/genome.fa.alt" ]]
 then
     k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam| samtools view -1 - > output.unsort.bam
 elif [[ $umi == 'umi' ]]
@@ -78,7 +81,8 @@ then
 else
     samtools view -1 -o output.unsort.bam out.sam
 fi
+
 which samtools
-samtools sort -n --threads $SLURM_CPUS_ON_NODE -o output.dups.bam output.unsort.bam
+samtools sort -n --threads $NPROC -o output.dups.bam output.unsort.bam
 java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
 samtools index ${pair_id}.bam

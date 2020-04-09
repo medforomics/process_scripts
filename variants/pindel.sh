@@ -15,6 +15,7 @@ do
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
 	l) idtbed=$OPTARG;;
+	g) snpeffgeno=$OPTARG;;
         h) usage;;
     esac
 done
@@ -28,9 +29,10 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -46,20 +48,31 @@ fi
 source /etc/profile.d/modules.sh	
 
 genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
+fi
 
-module load samtools/1.6 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
+module load samtools/gcc/1.8 bcftools/gcc/1.8 htslib/gcc/1.8 pindel/0.2.5-intel snpeff/4.3q bedtools/2.26.0
 touch ${pair_id}.pindel.config
 for i in *.bam; do
     sname=`echo "$i" |cut -f 1 -d '.'`
     echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
 done
 
-pindel -T $SLURM_CPUS_ON_NODE -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+pindel -T $NPROC -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
 pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
 cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
 tabix pindel.vcf.gz
 bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
 perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
-java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
+
+if [[ -a $idtbed ]]
+then
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${idtbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+else
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+fi
+
+java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel_sv.vcf.gz

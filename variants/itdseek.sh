@@ -9,13 +9,15 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:b:l:p:h opt
+while getopts :r:b:l:p:fh opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         b) sbam=$OPTARG;;	
         p) pair_id=$OPTARG;;
 	l) itdbed=$OPTARG;;
+	g) snpeffgeno=$OPTARG;;
+	f) filter=1;;
         h) usage;;
     esac
 done
@@ -29,9 +31,14 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $index_path ]]; then
     usage
 fi
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
+fi
+if [[ -z $snpeffgeno ]]
+then
+    snpeffgeno='GRCh38.86'
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -45,11 +52,19 @@ else
 fi
 
 source /etc/profile.d/modules.sh	
-
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 module load samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14 htslib/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 
 stexe=`which samtools`
 
-samtools view -@ $SLURM_CPUS_ON_NODE -L ${itdbed} ${sbam} | /project/shared/bicf_workflow_ref/seqprg/itdseek-1.2/itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
+samtools view -@ $NPROC -L ${itdbed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.itdseek.vcf.gz
 tabix ${pair_id}.itdseek.vcf.gz
-bcftools norm --fasta-ref $reffa -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config GRCh38.86 - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+bcftools norm --fasta-ref $reffa -c w -m - -Ov ${pair_id}.itdseek.vcf.gz | java -Xmx30g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config $snpeffgeno - |bgzip > ${pair_id}.itdseek_tandemdup.vcf.gz
+
+if [[ $filter == 1 ]]
+then
+    perl $baseDir/filter_itdseeker.pl -t ${pair_id} -d ${pair_id}.itdseek_tandemdup.vcf.gz
+    mv ${pair_id}.itdseek_tandemdup.vcf.gz ${pair_id}.itdseek_tandemdup.unfilt.vcf.gz
+    mv ${pair_id}.itdseek_tandemdup.pass.vcf ${pair_id}.itdseek_tandemdup.vcf
+    bgzip ${pair_id}.itdseek_tandemdup.pass.vcf
+fi

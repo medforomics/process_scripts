@@ -10,12 +10,13 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:v:h opt
+while getopts :r:p:v:sh opt
 do
     case $opt in
-        r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
 	v) vcf=$OPTARG;;
+	r) index_path=$OPTARG;;
+	s) skipnorm=1;;
         h) usage;;
     esac
 done
@@ -24,7 +25,7 @@ shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
-module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
+module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
 
 if [[ -a "${index_path}/genome.fa" ]]
 then
@@ -40,4 +41,9 @@ perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf
 bgzip -f ${pair_id}.uniform.vcf
 j=${pair_id}.uniform.vcf.gz
 tabix -f $j
-bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+if [[ skipnorm==1 ]]
+then
+    cp $j ${pair_id}.norm.vcf.gz
+else
+    bcftools norm --fasta-ref $reffa -m - -Oz $j -o ${pair_id}.norm.vcf.gz
+fi

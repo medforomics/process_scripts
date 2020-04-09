@@ -18,14 +18,16 @@ shift $(($OPTIND -1))
 
 # Check for mandatory options
 
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
+
 baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
 module load samtools/1.6
 for i in *.bam; do
-    samtools index -@ $SLURM_CPUS_ON_NODE ${i}
+    samtools index -@ $NPROC ${i}
 done 

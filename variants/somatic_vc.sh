@@ -20,7 +20,7 @@ usage(){
 }
 
 OPTIND=1 # Reset OPTIND
-while getopts :n:t:p:r:x:y:i:j:a:b:h opt
+while getopts :n:t:p:r:x:y:i:j:q:a:b:h opt
 do
     case $opt in 
       r) index_path=$OPTARG;;
@@ -33,6 +33,7 @@ do
       j) mtumor=$OPTARG;;
       a) algo=$OPTARG;;
       b) tbed=$OPTARG;; 
+      q) pon==$OPTARG;; 
       h) usage;;
     esac
 done
@@ -44,15 +45,22 @@ if [[ -z $normal ]] || [[ -z $tumor ]] || [[ -z $algo ]]; then
     echo $normal $tumor $algo
     usage
 fi 
-if [[ -z $SLURM_CPUS_ON_NODE ]] 
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]] 
   then 
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 #pair_id=${tid}_${nid}
 if [[ -z $mtumor ]]
 then
     mtumor=tumor
     mnormal=normal
+fi
+if [[ -f $pon ]]
+then
+    ponopt="--pon $pon"
+else
+    ponopt='';
 fi
 
 if [[ -a "${index_path}/genome.fa" ]]
@@ -89,34 +97,35 @@ if [ $algo == 'strelka2' ]
     mkdir manta strelka
     configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --runDir manta
     manta/runWorkflow.py -m local -j 8
-    configureStrelkaSomaticWorkflow.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
+    then
+	configureStrelkaSomaticWorkflow.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --targeted --indelCandidates manta/results/variants/candidateSmallIndels.vcf.gz --runDir strelka
+    else
+	configureStrelkaSomaticWorkflow.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --targeted --indelCandidates --runDir strelka
+    fi
     strelka/runWorkflow.py -m local -j 8
     vcf-concat strelka/results/variants/*.vcf.gz | vcf-annotate -n --fill-type -n |vcf-sort |java -jar $SNPEFF_HOME/SnpSift.jar filter "(GEN[*].DP >= 10)" | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.strelka2.vcf.gz
 fi
 if [ $algo == 'virmid' ]
   then 
     module load virmid/1.2 samtools/gcc/1.8 vcftools/0.1.14
-    virmid -R ${reffa} -D ${tumor} -N ${normal} -s ${cosmic} -t $SLURM_CPUS_ON_NODE -M 2000 -c1 10 -c2 10
+    virmid -R ${reffa} -D ${tumor} -N ${normal} -s ${cosmic} -t $NPROC -M 2000 -c1 10 -c2 10
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.som.passed.vcf
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.loh.passed.vcf
     module rm java/oracle/jdk1.7.0_51
     module load snpeff/4.3q
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
-elif [ $algo == 'mutect2' ]
+elif [ $algo == 'mutect' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
-  user=$USER
-  module load gatk/4.x singularity/2.6.1 picard/2.10.3
-  mkdir /tmp/${user}
-  export TMP_HOME=/tmp/${user}
-  java -XX:ParallelGCThreads=$SLURM_CPUS_ON_NODE -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${tumor} O=artifact_metrics.txt R=${reffa}
-  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" Mutect2 -R ${reffa} -A FisherStrand -A QualByDepth -A StrandArtifact -A DepthPerAlleleBySample -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
-  singularity exec -H /tmp/${user} /project/apps/singularity-images/gatk4/gatk-4.x.simg /gatk/gatk --java-options "-Xmx20g" FilterMutectCalls -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
-  module load snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
-  vcf-sort ${tid}.mutect.filt.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+  module load gatk/4.1.4.0 picard/2.10.3 snpeff/4.3q samtools/gcc/1.8 vcftools/0.1.14
+  java -XX:ParallelGCThreads=$NPROC -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar CollectSequencingArtifactMetrics I=${tumor} O=artifact_metrics.txt R=${reffa}
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt  --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf
+  #gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${tid}.mutect.vcf -O ${tid}.mutect.filt.vcf
+  vcf-sort ${tid}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then
-  module load samtools/gcc/1.8 VarScan/2.4.2 vcftools/0.1.14
+  module load bcftools/gcc/1.8 samtools/gcc/1.8 VarScan/2.4.2 vcftools/0.1.14
   module rm java/oracle/jdk1.7.0_51
   module load snpeff/4.3q 
   samtools mpileup -C 50 -f ${reffa} $tumor > t.mpileup

@@ -88,14 +88,11 @@ foreach $file (@files) {
 	  $cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
       next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
       next if($effect eq 'sequence_feature');
-      if ($file eq $opt{sv}) {
-	next unless ($effect eq 'gene_fusion');
-      }
       $keepforvcf = $gene;
     }
     next unless $keepforvcf;
-    if ($tumormaf[0] < 0.1) {
-	next unless ($outfile =~ m/pindel_tandemdup/);
+    if ($tumormaf[0] < 0.05) {
+	next unless ($outfile =~ m/tandemdup/);
     }
     my @fail = sort {$a cmp $b} keys %fail;
     next if (scalar(@fail) > 0);

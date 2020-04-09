@@ -4,25 +4,16 @@
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 
 my %opt = ();
-my $results = GetOptions (\%opt,'fusion|f=s','prefix|p=s','help|h');
-my %entrez;
-open ENT, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
-my $headline = <ENT>;
-while (my $line = <ENT>) {
-  chomp($line);
-  my @row = split(/\t/,$line);{
-      $entrez{$row[2]} = $row[1];
-  }
-}
+my $results = GetOptions (\%opt,'fusion|f=s','prefix|p=s','help|h','datadir|r=s');
 
-open OM, "</project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/utswv2_known_genefusions.txt" or die $!;
+open OM, "<$opt{datadir}/known_genefusions.txt" or die $!;
 while (my $line = <OM>) {
     chomp($line);
     $known{$line} = 1;
 }
 close OM;
 
-open OM, "</project/shared/bicf_workflow_ref/human/GRCh38/clinseq_prj/panel1410.genelist.txt" or die $!;
+open OM, "<$opt{datadir}/panelgenes.txt" or die $!;
 while (my $line = <OM>) {
     chomp($line);
     $keep{$line} = 1;
@@ -58,14 +49,10 @@ foreach $efile (@exonfiles) {
 }
 
 open OAS, ">$opt{prefix}\.translocations.answer.txt" or die $!;
-open OUTIR, ">$opt{prefix}\.cbioportal.genefusions.txt" or die $!;
 
-print OAS join("\t","FusionName","LeftGene","LefttBreakpoint","LeftGeneExons","LeftStrand",
+print OAS join("\t","FusionName","LeftGene","LeftBreakpoint","LeftGeneExons","LeftStrand",
 	       "RightGene","RightBreakpoint","RightGeneExons","RightStrand",
 	       "RNAReads","DNAReads","FusionType","Annot",'Filter','ChrType','ChrDistance'),"\n";
-
-print OUTIR join("\t","Hugo_Symbol","Entrez_Gene_Id","Center","Tumor_Sample_Barcode",
-               "Fusion","DNA_support","RNA_support","Method","Frame"),"\n";
 
 my $sname = $opt{prefix};
 
@@ -132,12 +119,7 @@ while (my $line = <FUSION>) {
   print OAS join("\t",$fname,$hash{LeftGene},$hash{LeftBreakpoint},$leftexon,$hash{LeftStrand},
 		 $hash{RightGene},$hash{RightBreakpoint},$rightexon,$hash{RightStrand},
 		 $hash{SumRNAReads},0,lc($hash{PROT_FUSION_TYPE}),$fusion_annot,$qc,$chrtype,$chrdist),"\n";
-  print OUTIR join("\t",$hash{LeftGene},$entrez{$hash{LeftGene}},"UTSW",$sname,$fname." fusion",
-		   $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
-  print OUTIR join("\t",$hash{RightGene},$entrez{$hash{RightGene}},"UTSW",$sname,$fname." fusion",
-		   $dna_support,$rna_support,"STAR Fusion",lc($hash{PROT_FUSION_TYPE})),"\n";
 }
 
 
 close OAS;
-close OUTIR;

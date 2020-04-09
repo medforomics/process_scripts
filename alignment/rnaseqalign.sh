@@ -36,9 +36,10 @@ fi
 source /etc/profile.d/modules.sh
 module load  samtools/1.6 picard/2.10.3
 baseDir="`dirname \"$0\"`"
-if [[ -z $SLURM_CPUS_ON_NODE ]]
+NPROC=$SLURM_CPUS_ON_NODE
+if [[ -z $NPROC ]]
 then
-    SLURM_CPUS_ON_NODE=1
+    NPROC=`nproc`
 fi
 
 diff $fq1 $fq2 > difffile
@@ -59,17 +60,17 @@ else
     module load hisat2/2.1.0-intel
     if [ -s difffile ]
     then
-        hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/hisat_index/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
+        hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
     else
-	hisat2 -p $SLURM_CPUS_ON_NODE --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/hisat_index/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
+	hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
     fi
     if [[ $umi == 1 ]]
     then
 	python ${baseDir}/add_umi_sam.py -s out.sam -o output.bam
     else
-	samtools view -1 --threads $SLURM_CPUS_ON_NODE -o output.bam out.sam
+	samtools view -1 --threads $NPROC -o output.bam out.sam
     fi
-    samtools sort -@ $SLURM_CPUS_ON_NODE -O BAM -o ${pair_id}.bam output.bam
+    samtools sort -@ $NPROC -O BAM -o ${pair_id}.bam output.bam
 fi
 
-samtools index -@ $SLURM_CPUS_ON_NODE ${pair_id}.bam
+samtools index -@ $NPROC ${pair_id}.bam

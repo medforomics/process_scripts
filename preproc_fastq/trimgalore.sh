@@ -10,17 +10,19 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :a:b:p:h opt
+while getopts :a:b:p:fh opt
 do
     case $opt in
         a) fq1=$OPTARG;;
         b) fq2=$OPTARG;;
         p) pair_id=$OPTARG;;
+	f) filter=1;;
         h) usage;;
     esac
 done
 
 shift $(($OPTIND -1))
+baseDir="`dirname \"$0\"`"
 
 # Check for mandatory options
 if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
@@ -41,4 +43,9 @@ else
     trim_galore -q 25 --illumina --gzip --length 35 ${fq1}
     mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
     cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
+fi
+
+if [[ $filter == 1 ]]
+then
+      perl $baseDir/parse_trimreport.pl ${pair_id}.trimreport.txt *trimming_report.txt
 fi

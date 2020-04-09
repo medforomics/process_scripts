@@ -4,9 +4,9 @@
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 use File::Basename;
 
-my $results= GetOptions (\%opt,'fpkm|f=s','logcpm|l=s','cnv|c=s','prefix|p=s','help|h');
+my $results= GetOptions (\%opt,'fpkm|f=s','logcpm|l=s','cnv|c=s','prefix|p=s','help|h','datadir|d=s');
 
-open ENT_GENE, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
+open ENT_GENE, "<$datadir\/gene_info.human.txt" or die $!;
 my %entrez;
 my %entgene;
 my $ent_header = <ENT_GENE>;
@@ -17,7 +17,7 @@ while (my $line = <ENT_GENE>){
   #$entrez{$row[2]}=$row[1];
 }
 close ENT_GENE;
-open ENT_ENS, "</project/shared/bicf_workflow_ref/human/GRCh38/genenames.txt" or die $!;
+open ENT_ENS, "<$datadir\/genenames.txt" or die $!;
 my $gn_header = <ENT_ENS>;
 my %ensym;
 while (my $line = <ENT_ENS>){
@@ -26,7 +26,7 @@ while (my $line = <ENT_ENS>){
   $entrez{$row[3]}=$entrez{$row[4]};
 }
 close ENT_ENS;
-open ENT_ENS, "</project/shared/bicf_workflow_ref/human/gene2ensembl.human.txt" or die $!;
+open ENT_ENS, "<$datadir\/gene2ensembl.human.txt" or die $!;
 my $ens_header = <ENT_ENS>;
 while (my $line = <ENT_ENS>){
   chomp $line;
