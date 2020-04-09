@@ -9,7 +9,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:l:p:h opt
+while getopts :r:l:b:p:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -24,10 +24,10 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
-
 # Check for mandatory options
-if [[ -z $tumor ]] || [[ -z $index_path ]]; then
+if [[ -z $sbam ]] || [[ -z $index_path ]]; then
     usage
+fi
 
 source /etc/profile.d/modules.sh	
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
