@@ -44,6 +44,7 @@ module load subread/1.6.1
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 featureCounts -s $stranded -M --fraction -J --ignoreDup -T $NPROC -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
+
 mkdir ${pair_id}_stringtie
 cd ${pair_id}_stringtie
 stringtie ../${sbam} -p $NPROC -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
