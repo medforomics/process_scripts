@@ -9,7 +9,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:l:b:p:h opt
+while getopts :r:l:n:b:p:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
