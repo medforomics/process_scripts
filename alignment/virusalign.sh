@@ -9,12 +9,13 @@ usage(){
 }
 
 OPTIND=1 #Reset OPTIN
-while getopts :b:r:p:h opt
+while getopts :b:r:p:fh opt
 do
   case $opt in
     b) bam=$OPTARG;;
     r) ref=$OPTARG;;
     p) pairid=$OPTARG;;
+    f) filter=1;;
     h) usage;;
   esac
 done
@@ -35,6 +36,7 @@ fi
 reffa=${ref}/idt_virus_reference.fa
 source /etc/profile.d/modules.sh
 module load bwa/intel/0.7.17 picard/2.10.3 samtools/1.6 
+baseDir="`dirname \"$0\"`"
 
 samtools view -@ 8 -b -u -F 2 ${bam} |samtools sort -n - >unmapped.bam
 java -Djava.io.tmpdir=./ -Xmx4g -jar $PICARD/picard.jar SamToFastq I=unmapped.bam FASTQ=unmapped.R1.fastq SECOND_END_FASTQ=unmapped.R2.fastq UNPAIRED_FASTQ=unmapped.unpaired.fastq
@@ -45,4 +47,7 @@ samtools view -h -F 256 -b out.sam -o out.bam
 samtools sort out.bam -o ${pairid}.viral.bam
 samtools index ${pairid}.viral.bam
 samtools idxstats ${pairid}.viral.bam >${pairid}.viral.idxstats.txt
-samtools flagstat ${pairid}.viral.bam >${pairid}.viral.flagstat.txt
+if [[ $filter == 1 ]]
+then
+    perl $baseDir/filter_viral_idxstats.txt -p ${pairid} ${pairid}.viral.idxstats.txt
+fi

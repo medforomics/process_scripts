@@ -9,13 +9,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:l:n:b:p:h opt
+while getopts :r:l:n:c:b:p:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
         b) sbam=$OPTARG;;
         n) normal=$OPTARG;;
+	c) capture=$OPTARG;;
         h) usage;;
     esac
 done
@@ -32,11 +33,17 @@ fi
 source /etc/profile.d/modules.sh	
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
+bedopt=''
+if [[ -n $capture ]]
+then
+    bedopt="-e $capture"
+fi
+   
 if [[ -n $normal ]]
 then
-    msisensor2 msi -d ${index_path}/microsatellites.list -n $normal -t $sbam -o ${pair_id}.msi
     
+    msisensor-pro msi -d ${index_path}/microsatellites.list -n $normal -t $sbam -o ${pair_id}.msi $bedopt
 else
     # -M ${index_path}/msi_tumoronly_model 
-    msisensor2 msi -d ${index_path}/microsatellites.list -t $sbam -o ${pair_id}.msi
+    msisensor2 msi -d ${index_path}/microsatellites.list -t $sbam -o ${pair_id}.msi $bedopt
 fi

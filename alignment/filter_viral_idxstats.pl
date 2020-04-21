@@ -8,11 +8,16 @@ use Getopt::Long;
 
 #my $cwd = getcwd();
 
+my $pair_id = "";
+GetOptions ('pairid|p=s' => \$pair_id);
+if($pair_id eq ""){$pair_id = "all";}
+
 my @allFiles = @ARGV;
 chomp(@allFiles);
+
 my %data;
 my @samples;
-open OUT, ">viral.info" or die $!;
+open OUT, ">$pair_id\.viral.seqstats.txt" or die $!;
 
 my %virus;
 $virus{'NC_001538.1'}="BK polyomavirus";
