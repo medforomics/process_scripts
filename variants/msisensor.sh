@@ -41,9 +41,8 @@ fi
    
 if [[ -n $normal ]]
 then
-    
     msisensor-pro msi -d ${index_path}/microsatellites.list -n $normal -t $sbam -o ${pair_id}.msi $bedopt
 else
     # -M ${index_path}/msi_tumoronly_model 
-    msisensor2 msi -d ${index_path}/microsatellites.list -t $sbam -o ${pair_id}.msi $bedopt
+    msisensor-pro pro -d ${index_path}/microsatellites.list_baseline -t ${sbam} -o ${pair_id}.msi $bedopt
 fi
