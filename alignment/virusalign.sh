@@ -49,5 +49,5 @@ samtools index ${pairid}.viral.bam
 samtools idxstats ${pairid}.viral.bam >${pairid}.viral.idxstats.txt
 if [[ $filter == 1 ]]
 then
-    perl $baseDir/filter_viral_idxstats.txt -p ${pairid} ${pairid}.viral.idxstats.txt
+    perl $baseDir/filter_viral_idxstats.pl -p ${pairid} ${pairid}.viral.idxstats.txt
 fi
