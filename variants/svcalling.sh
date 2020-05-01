@@ -110,7 +110,11 @@ then
     then
 	svaba run -p $NPROC -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
     else
-	svaba run -p $NPROC -G ${reffa} -t ${sbam} -a ${pair_id}
+	bamlist=''
+	for i in *.bam; do
+	    bamlist="$bamlist -t ${i}"
+	done
+	svaba run -p $NPROC -G ${reffa} -a ${pair_id} $bamlist
     fi
     #Create SV FILE
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.svaba.unfiltered.sv.vcf.gz
