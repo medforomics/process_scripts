@@ -9,13 +9,18 @@ open VCF, "gunzip -c $vcf|" or die $!;
 while (my $line = <VCF>) {
     chomp($line);
     if ($line =~ m/#/) {
+	next if ($line =~ m/FORMAT=<ID=AO/ || $line =~ m/FORMAT=<ID=AD/ || $line =~ m/FORMAT=<ID=RO/ || $line =~ m/FORMAT=<ID=DP/);
 	if ($line =~ m/#CHROM/) {
 	    print OUT "##FORMAT=<ID=AO,Number=A,Type=Integer,Description=\"Alternate allele observation count\">\n";
 	    print OUT "##FORMAT=<ID=RO,Number=1,Type=Integer,Description=\"Reference allele observation count\">\n";
 	    print OUT "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n";
 	    print OUT "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Approximate read depth (reads with MQ=255 or with bad mates are filtered)\">\n";
-	}
-	unless ($line =~ m/FORMAT=<ID=AO/ || $line =~ m/FORMAT=<ID=AD/ || $line =~ m/FORMAT=<ID=RO/ || $line =~ m/FORMAT=<ID=DP/) {
+	    my ($c, $p,$i,$r,$a,$s,$f,$an,$fo,@snames) = split(/\t/, $line);
+	    foreach my $j (0..$#snames) {
+		$snames[$j] =~ s/\[|\]|\.consensus|\.final//g;
+	    }
+	    print OUT join("\t",$c, $p,$i,$r,$a,$s,$f,$an,$fo,@snames),"\n";
+	} else {
 	    print OUT $line,"\n";
 	}
 	next;

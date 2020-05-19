@@ -47,6 +47,9 @@ for i in ${dir}/*.vcf.gz; do
     fi
 done 
 
-perl $baseDir/unionvcf.pl ${index_path}/union.header.vcf $list2
+echo "##fileformat=VCFv4.2" > header.vcf
+zcat ${dir}/*.vcf.gz |grep "##" |grep -v '#fileformat' |sort -u |grep 'ALT\|FILTER\|FORMAT\|INFO' >> header.vcf
+
+perl $baseDir/unionvcf.pl header.vcf $list2
 perl $baseDir/vcfsorter.pl ${index_path}/genome.dict int.vcf |bgzip > ${pair_id}.union.vcf.gz
 
