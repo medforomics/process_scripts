@@ -41,5 +41,8 @@ else
     module load R/3.2.1-intel
     Rscript  $baseDir/dea.R
     Rscript $baseDir/build_ballgown.R *_stringtie
-    perl $baseDir/concat_edgeR.pl *.edgeR.txt
+    if [[ -n `ls *.edgeR.txt` ]]
+    then
+	perl $baseDir/concat_edgeR.pl *.edgeR.txt
+    fi
 fi

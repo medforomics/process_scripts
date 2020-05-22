@@ -118,8 +118,11 @@ for (i in 1:a) {
 
 ###################### Run EdgeR ########################
 ###################### Run QuSage ######################
-
-MSIG.geneSets <- read.gmt('geneset.gmt')
+run.qusage <- 0
+if (file.exists('geneset.gmt')) {
+   MSIG.geneSets <- read.gmt('geneset.gmt')
+   run.qusage <- 1
+}
 
 design <- model.matrix(~grps)
 d <- DGEList(counts=countTable,group=grps,lib.size=libSizes)
@@ -166,10 +169,12 @@ for (i in 1:a) {
       heatmap.2(zscores2, col = bluered(100),Rowv = as.dendrogram(STREE), RowSideColors = col.blocks,dendrogram='row', cexCol=textscale,labCol=s$symbol,srtRow=45,srtCol=45,trace="none", margins=c(5, 5))
       legend("topright",legend=grpnames,col=rainbow(length(grpnames)),pch=20,cex=0.5)
       dev.off()
-      gcont <- paste(cond[j],cond[i],sep='-')
-      qs.results = qusage(logcpm, grps,gcont,MSIG.geneSets)
-      save(qs.results,file=paste(cond[i],'_',cond[j],'.qusage.rda',sep=""))
-      }
+      if (run.qusage > 0) {
+      	 gcont <- paste(cond[j],cond[i],sep='-')
+      	 qs.results = qusage(logcpm, grps,gcont,MSIG.geneSets)
+      	 save(qs.results,file=paste(cond[i],'_',cond[j],'.qusage.rda',sep=""))
+	 }
+	 }
       }
   }
 }
