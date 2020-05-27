@@ -48,6 +48,8 @@ for i in ${dir}/*.vcf.gz; do
 done 
 
 echo "##fileformat=VCFv4.2" > header.vcf
+echo "##INFO=<ID=CallSet,Number='.',Type=String,Description=\"Caller\">" >> header.vcf
+echo "##INFO=<ID=CallSetInconsistent,Number=1,Type=Integer,Description=\"Caller Inconsistency Manual Inspection\">" >> header.vcf
 zcat ${dir}/*.vcf.gz |grep "##" |grep -v '#fileformat' |sort -u |grep 'ALT\|FILTER\|FORMAT\|INFO' >> header.vcf
 
 perl $baseDir/unionvcf.pl header.vcf $list2
