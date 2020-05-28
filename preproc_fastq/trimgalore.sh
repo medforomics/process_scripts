@@ -28,19 +28,32 @@ baseDir="`dirname \"$0\"`"
 if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
     usage
 fi
+fqs=("$@")
+numfq=$#
 
-r1base="${fq1%.fastq*}"
-r2base="${fq2%.fastq*}"
-source /etc/profile.d/modules.sh
-module load trimgalore/0.4.1 cutadapt/1.9.1
-
-if [ -s $fq2 ]
+if [[ -f $fq1 ]]
 then
-    trim_galore --paired -q 25 --illumina --gzip --length 35 ${fq1} ${fq2}
+    fqs="$fq1"
+    r1base="${fq1%.fastq*}"
+fi
+if [[ -f $fq2 ]]
+then
+    fqs+=" $fq2"
+    r2base="${fq2%.fastq*}"
+fi
+
+numfq=${#fqs[@]}
+
+source /etc/profile.d/modules.sh
+module load trimgalore/0.6.4 cutadapt/2.5
+
+if [ $numfq > 1 ]
+then
+    trim_galore --paired -q 25 --illumina --gzip --length 35 ${fqs}
     mv ${r1base}_val_1.fq.gz ${pair_id}.trim.R1.fastq.gz
     mv ${r2base}_val_2.fq.gz ${pair_id}.trim.R2.fastq.gz
 else
-    trim_galore -q 25 --illumina --gzip --length 35 ${fq1}
+    trim_galore -q 25 --illumina --gzip --length 35 ${fqs}
     mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
     cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
 fi
