@@ -92,10 +92,15 @@ source /etc/profile.d/modules.sh
 module load htslib/gcc/1.8
 
 if [ $algo == 'strelka2' ]
-  then
-    module load strelka/2.9.10 manta/1.3.1 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
-    mkdir manta strelka
-    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --runDir manta
+then
+    opt=''
+    if [[ -n $tbed ]]
+    then
+	opt="--callRegions ${tbed}.gz}"
+	module load strelka/2.9.10 manta/1.3.1 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
+    fi
+    mkdir manta     
+    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} $opt --runDir manta
     manta/runWorkflow.py -m local -j 8
     if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
     then

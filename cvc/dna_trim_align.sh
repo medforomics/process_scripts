@@ -26,11 +26,20 @@ done
 shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
-fqs=("$@")
+fqs=''
+i=0
 numfq=$#
 
+while [[ $i -le $numfq ]]
+do
+    fqs="$fqs $1"
+    i=$((i + 1))
+    shift 1
+done
+
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
+if [[ -z $pair_id ]]
+then
     usage
 fi
 NPROC=$SLURM_CPUS_ON_NODE
@@ -50,17 +59,18 @@ else
 fi
 
 source /etc/profile.d/modules.sh
-module load trimgalore/0.6.4 cutadapt/1.9.1 python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
+module load trimgalore/0.6.4 cutadapt/1.9.1 bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
 
 threads=`expr $NPROC / 2`
 
-trim_galore --cores $threads --paired -q 25 -o trim --illumina --gzip --length 35 ${fqs}
-if [[ $filter == 1 ]]
+trim_galore --cores 4 --paired -q 25 --illumina --gzip --length 35 ${fqs}
+
+if [[ ${filter} == 1 ]]
 then
       perl $baseDir/parse_trimreport.pl ${pair_id}.trimreport.txt *trimming_report.txt
 fi
 
-bwa mem -M -t $threads -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa trim/*.fq.gz > out.sam
+bwa mem -M -t $threads -R "@RG\tID:${read_group}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${read_group}" ${index_path}/genome.fa *.fq.gz > out.sam
 
 if [[ $umi == 'umi' ]] && [[ -f "${index_path}/genome.fa.alt" ]]
 then
