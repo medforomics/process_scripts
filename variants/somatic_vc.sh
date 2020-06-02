@@ -93,11 +93,11 @@ module load htslib/gcc/1.8
 
 if [ $algo == 'strelka2' ]
 then
+    module load strelka/2.9.10 manta/1.3.1 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
     opt=''
     if [[ -n $tbed ]]
     then
-	opt="--callRegions ${tbed}.gz}"
-	module load strelka/2.9.10 manta/1.3.1 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
+	opt="--callRegions ${tbed}.gz"
     fi
     mkdir manta     
     configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} $opt --runDir manta
