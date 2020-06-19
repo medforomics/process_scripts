@@ -54,7 +54,7 @@ while (my $line = <CNR>) {
     } else {
 	my @ids = split(/,/,$geneids);
 	foreach my $gid (@ids) {
-	    next if ($gid =~ /^rs\d+$|^SNP:rs\d+$|^-$|Fusion|MSI/);
+	    next if ($gid =~ /^rs\d+$|^SNP:rs\d+$|^-$|Fusion|MSI:/);
 	    my ($gene,@other) = split(/:/,$gid);
 	    my ($gname,@loc) = split(/_/,$gene);
 	    $genes{$gname} = 1;
@@ -93,7 +93,7 @@ while (my $line = <IN>) {
     } else {
 	my @ids = split(/,/,$geneids);
 	foreach my $gid (@ids) {
-	    next if ($gid =~ /^rs\d+$|^SNP:rs\d+$|^-$|Fusion|MSI/);
+	    next if ($gid =~ /^rs\d+$|^SNP:rs\d+$|^-$|Fusion|MSI:/);
 	    my ($gene,@other) = split(/:/,$gid);
 	    my ($gname,@loc) = split(/_/,$gene);
 	    $genes{$gname} = 1;
