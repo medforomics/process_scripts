@@ -13,7 +13,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:b:c:n:p:s:d:h opt
+while getopts :r:b:c:n:p:e:s:d:h opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -22,6 +22,7 @@ do
         n) nuctype=$OPTARG;;
         p) pair_id=$OPTARG;;
 	d) dedup=$OPTARG;;
+	e) version=$OPTARG;;
 	s) skiplc=1;;
         h) usage;;
     esac
@@ -63,9 +64,12 @@ if [[ $nuctype == 'dna' ]]; then
 	samtools index -@ $NPROC ${pair_id}.ontarget.bam
 	samtools flagstat  ${pair_id}.ontarget.bam > ${pair_id}.ontarget.flagstat.txt
 	samtools view  -@ $NPROC -b -q 1 ${sbam} | bedtools coverage -sorted -hist -g ${index_path}/genomefile.txt -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
+	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$NPROC -jar $PICARD/picard.jar EstimateLibraryComplexity BARCODE_TAG=RG I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
 	#java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt TMP_DIR=${tmpdir}
-	#java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$NPROC -jar $PICARD/picard.jar EstimateLibraryComplexity I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
 	#samtools view  -@ $NPROC ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     fi
     #java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt TMP_DIR=${tmpdir}
+    perl $baseDir/sequenceqc_dna.pl -e ${version} -r $index_path ${pair_id}.genomecov.txt
+else
+    perl $baseDir/sequenceqc_rna.pl -e ${version} -r $index_path ${pair_id}.flagstat.txt
 fi
