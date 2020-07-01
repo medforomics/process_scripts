@@ -45,7 +45,7 @@ fi
 numfq=${#fqs[@]}
 
 source /etc/profile.d/modules.sh
-module load trimgalore/0.6.4 cutadapt/2.5
+module load trimgalore/0.6.4 cutadapt/2.5 perl/5.28.0 
 
 if [ $numfq > 1 ]
 then
