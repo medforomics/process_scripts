@@ -90,12 +90,18 @@ baseDir="`dirname \"$0\"`"
 
 source /etc/profile.d/modules.sh
 module load htslib/gcc/1.8
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 if [ $algo == 'strelka2' ]
-  then
+then
     module load strelka/2.9.10 manta/1.3.1 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
-    mkdir manta strelka
-    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --runDir manta
+    opt=''
+    if [[ -n $tbed ]]
+    then
+	opt="--callRegions ${tbed}.gz"
+    fi
+    mkdir manta     
+    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} $opt --runDir manta
     manta/runWorkflow.py -m local -j 8
     if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
     then
@@ -135,7 +141,7 @@ then
   vcf-concat vscan*.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((exists SOMATIC) & (GEN[*].DP >= 10))' | perl -pe "s/TUMOR/${tid}/" | perl -pe "s/NORMAL/${nid}/g" | bgzip >  ${pair_id}.varscan.vcf.gz
 elif [ $algo == 'shimmer' ]
 then
-    module load shimmer/0.1.1 samtools/gcc/1.8  vcftools/0.1.14
+    module load samtools/gcc/1.8  R/3.6.1-gccmkl vcftools/0.1.14
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
     perl $baseDir/add_readct_shimmer.pl
     module rm java/oracle/jdk1.7.0_51

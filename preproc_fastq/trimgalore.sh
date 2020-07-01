@@ -25,11 +25,19 @@ shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
+if [[ -z $pair_id ]]; then
     usage
 fi
-fqs=("$@")
+fqs=''
+i=0
 numfq=$#
+
+while [[ $i -le $numfq ]]
+do
+    fqs="$fqs $1"
+    i=$((i + 1))
+    shift 1
+done
 
 if [[ -f $fq1 ]]
 then
@@ -50,11 +58,11 @@ module load trimgalore/0.6.4 cutadapt/2.5 perl/5.28.0
 if [ $numfq > 1 ]
 then
     trim_galore --paired -q 25 --illumina --gzip --length 35 ${fqs}
-    mv ${r1base}_val_1.fq.gz ${pair_id}.trim.R1.fastq.gz
-    mv ${r2base}_val_2.fq.gz ${pair_id}.trim.R2.fastq.gz
+    mv *_val_1.fq.gz ${pair_id}.trim.R1.fastq.gz
+    mv *_val_2.fq.gz ${pair_id}.trim.R2.fastq.gz
 else
     trim_galore -q 25 --illumina --gzip --length 35 ${fqs}
-    mv ${r1base}_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
+    mv *_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
     cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
 fi
 

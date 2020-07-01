@@ -18,6 +18,7 @@ do
         p) pair_id=$OPTARG;;
         a) algo=$OPTARG;;
 	t) rna=1;;
+	b) tbed=$OPTARG;;
 	q) pon==$OPTARG;; 
         h) usage;;
     esac
@@ -131,6 +132,11 @@ then
 
 elif [[ $algo == 'strelka2' ]]
 then
+    opt=''
+    if [[ -n $tbed ]]
+    then
+	opt="--callRegions ${tbed}.gz"
+    fi
     if [[ $rna == 1 ]]
     then
 	mode="--rna"
@@ -143,7 +149,7 @@ then
     for i in *.bam; do
 	gvcflist="$gvcflist --bam ${i}"
     done
-    configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
+    configManta.py $gvcflist $opt --referenceFasta ${reffa} $mode --runDir manta
     manta/runWorkflow.py -m local -j $NPROC
     if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
     then

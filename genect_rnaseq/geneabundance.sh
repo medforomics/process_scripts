@@ -11,13 +11,14 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:g:p:s:h opt
+while getopts :b:g:p:f:s:h opt
 do
     case $opt in
         b) sbam=$OPTARG;;
         g) gtf=$OPTARG;;
         p) pair_id=$OPTARG;;
         s) stranded=$OPTARG;;
+	f) filter=$OPTARG;;
         h) usage;;
     esac
 done
@@ -48,4 +49,11 @@ featureCounts -s $stranded -M --fraction -J --ignoreDup -T $NPROC -p -g gene_nam
 mkdir ${pair_id}_stringtie
 cd ${pair_id}_stringtie
 stringtie ../${sbam} -p $NPROC -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
- 
+
+if [[ -f $filter ]]
+then
+    cd ..
+    mv ${pair_id}.fpkm.txt ${prefix}.fpkm.ori.txt
+    perl ${baseDir}/fpkm_subset_panel.pl -f ${prefix}.fpkm.ori.txt -g $filter
+    mv ${prefix}.fpkm.capture.txt ${pair_id}.fpkm.txt
+fi

@@ -67,31 +67,20 @@ then
     tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 fi
 
+bams=''
+for i in *.bam; do
+    bams="$bams $i" 
+done
+
+#RUN DELLY
 if [[ $method == 'delly' ]]
 then
-    #module load  delly2/v0.7.7-multi
-    if [[ -n ${normal} ]]
-    then
-	#RUN DELLY
-	echo -e "${nid}\tcontrol"> samples.tsv
-	echo -e "${tid}\ttumor" >> samples.tsv
-	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam} ${normal}
-	#delly2 filter -o ${pair_id}.delly_tra.bcf -f somatic -s samples.tsv ${pair_id}.delly_translocations.bcf
-    else
-	#RUN DELLY
-	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${sbam}
-	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${sbam}
-	#delly2 filter -o ${pair_id}.delly_tra.bcf -f germline ${pair_id}.delly_translocations.bcf
-    fi
+    delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${bams} 
+    delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${bams}
+    delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${bams}
+    delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${bams}
+    delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${bams}
     #MERGE DELLY AND MAKE BED
-    
     bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.delly.svar.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.sv -v ${pair_id}.delly.svar.vcf.gz -s
     java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 )" ${pair_id}.delly.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.delly.vcf.gz
