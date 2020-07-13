@@ -122,7 +122,9 @@ foreach $sfile (@statfiles) {
 		 "Alignment_Status\t".$hash{status},"Alignment_Date\t".$hash{date},
 		 "File_Owner\t".$hash{fileowner},"Workflow_Version\t".$gittag),"\n";
   close OUT;
-  system(qq{cat $opt{refdir}\/reference_info.txt >> $prefix\.sequence.stats.txt});
+  if (-e "$opt{refdir}\/reference_info.txt") {
+      system(qq{cat $opt{refdir}\/reference_info.txt >> $prefix\.sequence.stats.txt});
+  }
   ##### END separateFilesPerSample ######
 }
 
