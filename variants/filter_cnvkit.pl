@@ -78,7 +78,6 @@ while (my $line = <IN>) {
     foreach my $j (0..$#row) {
 	$hash{$colnames[$j]} = $row[$j];
     }
-    next if ($hash{chromosome} eq 'chrX' && $hash{cn} == 1);
     my $key = $hash{chromosome}.":".$hash{start}."-".$hash{end};
     my $geneids = $hash{gene};
     my %genes;
