@@ -51,11 +51,12 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
+threads=`expr $NPROC - 10`
 
 if [[ $dedup == 1 ]]
 then
     mv $sbam ori.bam
-    samtools view -@ $NPROC -F 1024 -b -o ${sbam} ori.bam
+    samtools view -@ $threads -F 1024 -b -o ${sbam} ori.bam
 fi
 tmpdir=`pwd`
 if [[ $nuctype == 'dna' ]]; then
@@ -65,13 +66,13 @@ if [[ $nuctype == 'dna' ]]; then
     perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt
     if [[ -z $skiplc ]]
     then
-	samtools view -@ $NPROC -b -L ${bed} -o ${pair_id}.ontarget.bam ${sbam}
-	samtools index -@ $NPROC ${pair_id}.ontarget.bam
+	samtools view -@ $threads -b -L ${bed} -o ${pair_id}.ontarget.bam ${sbam}
+	samtools index -@ $threads ${pair_id}.ontarget.bam
 	samtools flagstat  ${pair_id}.ontarget.bam > ${pair_id}.ontarget.flagstat.txt
-	samtools view  -@ $NPROC -b -q 1 ${sbam} | bedtools coverage -hist -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
-	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$NPROC -jar $PICARD/picard.jar EstimateLibraryComplexity BARCODE_TAG=RG I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
+	samtools view  -@ $threads -b -q 1 ${sbam} | bedtools coverage -hist -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
+	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$threads -jar $PICARD/picard.jar EstimateLibraryComplexity BARCODE_TAG=RG I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
 	#java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt TMP_DIR=${tmpdir}
-	#samtools view  -@ $NPROC ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
+	#samtools view  -@ $threads ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     fi
     #java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt TMP_DIR=${tmpdir}
     if [[ $index_path/reference_info.pl ]]
