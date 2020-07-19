@@ -75,7 +75,7 @@ if [[ $nuctype == 'dna' ]]; then
 	#samtools view  -@ $threads ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     fi
     #java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectInsertSizeMetrics INPUT=${sbam} HISTOGRAM_FILE=${pair_id}.hist.ps REFERENCE_SEQUENCE=${index_path}/genome.fa OUTPUT=${pair_id}.hist.txt TMP_DIR=${tmpdir}
-    if [[ $index_path/reference_info.pl ]]
+    if [[ $index_path/reference_info.txt ]]
     then
 	perl $baseDir/sequenceqc_dna.pl -e ${version} -r $index_path ${pair_id}.genomecov.txt
     else

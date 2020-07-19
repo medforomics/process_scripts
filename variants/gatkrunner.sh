@@ -62,27 +62,6 @@ module load gatk/4.1.4.0 samtools/gcc/1.8
 which samtools
 samtools index -@ $NPROC ${sbam}
 
-if [[ $algo == 'gatkbam_rna' ]]
-then
-    module load picard/2.10.3
-    java -Xmx4g -jar $PICARD/picard.jar CleanSam INPUT=${sbam} OUTPUT=${pair_id}.clean.bam
-    java -Xmx4g -jar $PICARD/picard.jar ReorderSam I=${pair_id}.clean.bam O=${pair_id}.sort.bam R=${reffa} CREATE_INDEX=TRUE 
-    java -Xmx4g -jar $PICARD/picard.jar AddOrReplaceReadGroups INPUT=${pair_id}.clean.bam O=${pair_id}.rg_added_sorted.bam SO=coordinate RGID=${pair_id} RGLB=tx RGPL=illumina RGPU=barcode RGSM=${pair_id}
-    samtools index -@ $NPROC ${pair_id}.rg_added_sorted.bam
-    gatk SplitNCigarReads -R ${reffa} -I ${pair_id}.rg_added_sorted.bam -O ${pair_id}.split.bam
-    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${pair_id}.split.bam --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
-    gatk --java-options "-Xmx32g" ApplyBQSR -I ${pair_id}.split.bam -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
-    samtools index -@ $NPROC ${pair_id}.final.bam
-elif [[ $algo == 'gatkbam' ]]
-then
-    gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
-    gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
-    samtools index -@ $NPROC ${pair_id}.final.bam
-
-elif [[ $algo == 'abra2' ]]
-then
-  module load abra2/2.18
-  mkdir tmpdir
-  java  -Xmx16G -jar /cm/shared/apps/abra2/lib/abra2.jar --in ${sbam}  --in-vcf /archive/PHG/PHG_Clinical/phg_workflow/analysis/awesomeproject/GoldIndels.vcf --out ${pair_id}.final.bam --ref ${reffa} --threads $NPROC --tmpdir tmpdir
-  samtools index -@ $NPROC ${pair_id}.final.bam
-fi
+gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
+samtools index -@ $NPROC ${pair_id}.final.bam

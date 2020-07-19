@@ -94,6 +94,15 @@ then
 else
     interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
 fi
+if [[ -z $tid ]]
+then
+    tid=`samtools view -H ${tumor} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+fi
+if [[ -z $nid ]]
+then
+    nid=`samtools view -H ${normal} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+fi
+
 
 source /etc/profile.d/modules.sh
 module load htslib/gcc/1.8
