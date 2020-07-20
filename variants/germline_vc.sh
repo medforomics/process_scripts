@@ -66,6 +66,13 @@ else
     ponopt='';
 fi
 
+if [[ -n $tbed ]]
+then
+    interval=$tbed
+else
+    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+fi
+
 source /etc/profile.d/modules.sh
 module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
 
@@ -108,15 +115,14 @@ then
     for i in *.bam; do
 	prefix="${i%.bam}"
 	echo ${prefix}
-	gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth  -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -O haplotypecaller.vcf.gz
+	gatk --java-options "-Xmx32g" HaplotypeCaller -R ${reffa} -I ${i} -A FisherStrand -A QualByDepth -A DepthPerAlleleBySample -A TandemRepeat --emit-ref-confidence GVCF -G StandardAnnotation -G AS_StandardAnnotation -G StandardHCAnnotation -O haplotypecaller.vcf.gz -L $interval
 	java -jar $PICARD/picard.jar SortVcf I=haplotypecaller.vcf.gz O=${prefix}.gatk.g.vcf R=${reffa} CREATE_INDEX=TRUE
 	
 	gvcflist="$gvcflist -V ${prefix}.gatk.g.vcf"
     done
-    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
-    gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb -L $interval
-    gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf
-    bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type gatk.vcf | bgzip > ${pair_id}.gatk.vcf.gz
+    gatk --java-options "-Xmx32g" GenomicsDBImport $gvcflist --genomicsdb-workspace-path gendb -L $interval --reader-threads $NPROC 
+    gatk --java-options "-Xmx32g" GenotypeGVCFs -V gendb://gendb -R ${reffa} -D ${gatk4_dbsnp} -O gatk.vcf -L $interval
+    bcftools norm -c s -f ${reffa} -w 10 -O v gatk.vcf | vcf-annotate -n --fill-type | bgzip > ${pair_id}.gatk.vcf.gz
     tabix ${pair_id}.gatk.vcf.gz
 elif [ $algo == 'mutect' ]
 then
@@ -126,10 +132,8 @@ then
   for i in *.bam; do
       bamlist+="-I ${i} "
   done
-  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd`
-  #gatk --java-options "-Xmx20g" FilterMutectCalls -R ${reffa} -V ${pair_id}.mutect.vcf -O ${pair_id}.mutect.filt.vcf
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` -L $interval
   vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
-
 elif [[ $algo == 'strelka2' ]]
 then
     opt=''
