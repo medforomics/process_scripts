@@ -31,7 +31,6 @@ fi
 fqs=''
 i=0
 numfq=$#
-
 while [[ $i -le $numfq ]]
 do
     fqs="$fqs $1"
@@ -51,17 +50,23 @@ then
 fi
 
 numfq=${#fqs[@]}
-
+copts='-q 25 --illumina --gzip --length 35'
+if [[ $numfq == 2 ]]
+then
+    copts="$copts --paired"
+fi
+    
 source /etc/profile.d/modules.sh
 module load trimgalore/0.6.4 cutadapt/2.5
 
-if [ $numfq > 1 ]
+trim_galore $copts ${fqs}
+files=`find ./ -name "*_val_1.fq.gz"`
+
+if [[ -n $files ]]
 then
-    trim_galore --paired -q 25 --illumina --gzip --length 35 ${fqs}
     mv *_val_1.fq.gz ${pair_id}.trim.R1.fastq.gz
     mv *_val_2.fq.gz ${pair_id}.trim.R2.fastq.gz
 else
-    trim_galore -q 25 --illumina --gzip --length 35 ${fqs}
     mv *_trimmed.fq.gz ${pair_id}.trim.R1.fastq.gz
     cp ${pair_id}.trim.R1.fastq.gz ${pair_id}.trim.R2.fastq.gz 
 fi
