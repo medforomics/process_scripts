@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#sequenceqc_alignment.p
+#sequenceqc_alignment.pl
 
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
@@ -122,7 +122,7 @@ foreach $sfile (@statfiles) {
 		 "Alignment_Status\t".$hash{status},"Alignment_Date\t".$hash{date},
 		 "File_Owner\t".$hash{fileowner},"Workflow_Version\t".$gittag),"\n";
   close OUT;
-  if (-e "$opt{refdir}\/reference_info.txt") {
+  if ($opt{refdir} && -e "$opt{refdir}\/reference_info.txt") {
       system(qq{cat $opt{refdir}\/reference_info.txt >> $prefix\.sequence.stats.txt});
   }
   ##### END separateFilesPerSample ######

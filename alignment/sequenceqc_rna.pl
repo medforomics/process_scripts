@@ -74,5 +74,4 @@ foreach my $file (@files) {
   print OUT join("\n","Sample\t".$sample,"Total_Raw_Count\t".$total, "Read1_Map\t".$pairs,"Read2_Map\t".$read2ct,
     "Map_Rate\t".$maprate,"Concordant_Rate\t".$concorrate,"Alignment_Status\t".$status,"Alignment_Date\t".$date,
     "File_Owner\t".$fileowner,"Workflow_Version\t".$gittag),"\n";
-  system(qq{cat $opt{refdir}\/reference_info.txt >> $prefix\.sequence.stats.txt});
 }
