@@ -1,15 +1,13 @@
 #!/bin/bin/perl
-use strict;
-use warnings;
 use diagnostics;
 use Getopt::Long;
 
 
-my ($genelist,$fpkm_file) = ("") x 2;
+my ($genelist,$fpkm_file,$geneinfo) = ("") x 3;
 
 GetOptions( 'g|genes=s' => \$genelist,
             'f|fpkm=s' => \$fpkm_file,
-	    'i|geneinfo=s'=> \$refinfo);
+	    'i|geneinfo=s'=> \$geneinfo);
 
 my $fpkm_out = $fpkm_file;
 $fpkm_out =~ s/\.fpkm.+txt/\.fpkm.capture.txt/;
