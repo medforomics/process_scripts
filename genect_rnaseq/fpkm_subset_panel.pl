@@ -8,14 +8,15 @@ use Getopt::Long;
 my ($genelist,$fpkm_file) = ("") x 2;
 
 GetOptions( 'g|genes=s' => \$genelist,
-            'f|fpkm=s' => \$fpkm_file);
+            'f|fpkm=s' => \$fpkm_file,
+	    'i|refinfo=s'=> \$refinfo);
 
 my $fpkm_out = $fpkm_file;
 $fpkm_out =~ s/\.fpkm.+txt/\.fpkm.capture.txt/;
 open OUT, ">$fpkm_out" or die $!;
 
 #gene_info.human.txt file is required for gene alias information
-open GENEINFO, "</project/shared/bicf_workflow_ref/human/gene_info.human.txt" or die $!;
+open GENEINFO, "<$refinfo/gene_info.human.txt" or die $!;
 my %geneinfo;
 while(my $gline = <GENEINFO>){
 	chomp $gline;
