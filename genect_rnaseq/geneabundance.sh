@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :b:g:p:f:s:h opt
+while getopts :b:g:p:i:f:s:h opt
 do
     case $opt in
         b) sbam=$OPTARG;;
@@ -47,14 +47,13 @@ export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 featureCounts -s $stranded -M --fraction -J --ignoreDup -T $NPROC -p -g gene_name -a ${gtf} -o ${pair_id}.cts ${sbam}
 
-mkdir ${pair_id}_stringtie
+mkdir -p ${pair_id}_stringtie
 cd ${pair_id}_stringtie
 stringtie ../${sbam} -p $NPROC -G ${gtf} -B -e -o denovo.gtf -A ../${pair_id}.fpkm.txt
-
 if [[ -f $filter ]]
 then
     cd ..
-    mv ${pair_id}.fpkm.txt ${prefix}.fpkm.ori.txt
-    perl ${baseDir}/fpkm_subset_panel.pl -f ${prefix}.fpkm.ori.txt -g $filter -i $ginfo
-    mv ${prefix}.fpkm.capture.txt ${pair_id}.fpkm.txt
+    cp ${pair_id}.fpkm.txt ${pair_id}.fpkm.ori.txt
+    perl ${baseDir}/fpkm_subset_panel.pl -f ${pair_id}.fpkm.ori.txt -g $filter -i $ginfo
+    mv ${pair_id}.fpkm.capture.txt ${pair_id}.fpkm.txt
 fi
