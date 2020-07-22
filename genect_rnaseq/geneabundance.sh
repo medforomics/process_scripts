@@ -19,6 +19,7 @@ do
         p) pair_id=$OPTARG;;
         s) stranded=$OPTARG;;
 	f) filter=$OPTARG;;
+	i) ginfo=$OPTARG;;
         h) usage;;
     esac
 done
@@ -54,6 +55,6 @@ if [[ -f $filter ]]
 then
     cd ..
     mv ${pair_id}.fpkm.txt ${prefix}.fpkm.ori.txt
-    perl ${baseDir}/fpkm_subset_panel.pl -f ${prefix}.fpkm.ori.txt -g $filter
+    perl ${baseDir}/fpkm_subset_panel.pl -f ${prefix}.fpkm.ori.txt -g $filter -i $ginfo
     mv ${prefix}.fpkm.capture.txt ${pair_id}.fpkm.txt
 fi
