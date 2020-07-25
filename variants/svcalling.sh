@@ -64,7 +64,7 @@ mkdir -p temp
 
 if [[ -z $tid ]]
 then
-    tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+    tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pe 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 fi
 
 bams=''
