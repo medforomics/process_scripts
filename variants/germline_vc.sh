@@ -69,8 +69,11 @@ fi
 if [[ -n $tbed ]]
 then
     interval=$tbed
+    awk '{print $1":"$2"-"$3}' $tbed > fbsplit.genomefile.txt
+    fbsplit=fbsplit.genomefile.txt
 else
     interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+    fbsplit="${index_path}/genomefile.5M.txt"
 fi
 
 source /etc/profile.d/modules.sh
@@ -97,7 +100,7 @@ then
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    cut -f 1 ${index_path}/genomefile.5M.txt | parallel --delay 2 -j $NPROC "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    cut -f 1 $fbsplit | parallel --delay 1 --jobs 0 "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.fb.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then

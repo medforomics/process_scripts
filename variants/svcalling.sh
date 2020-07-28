@@ -11,19 +11,20 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:i:x:y:n:l:a:hf opt
+while getopts :r:p:b:t:x:c:y:n:l:a:hf opt
 do
     case $opt in
         r) index_path=$OPTARG;;
         p) pair_id=$OPTARG;;
-        b) sbam=$OPTARG;;
-        i) tumor=$OPTARG;;
+        t) tumor=$OPTARG;;
         n) normal=$OPTARG;;
 	a) method=$OPTARG;;
         x) tid=$OPTARG;;
         y) nid=$OPTARG;;
 	f) filter=1;;
-	l) bed=$OPTARG;;
+        b) sbam=$OPTARG;;
+	c) tbed=$OPTARG;;
+	l) itdbed=$OPTARG;;
         h) usage;;
     esac
 done
@@ -152,14 +153,19 @@ then
 	echo -e "${i}\t400\t${sname}" >> ${pair_id}.pindel.config
 	samtools index -@ $NPROC $i
     done
-    pindel -T $NPROC -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --RP
+    bedopt=''
+    if [[ -f $tbed ]]
+    then
+	bedopt="-j $tbed"
+    fi
+    pindel -T $NPROC -f ${reffa} -i ${pair_id}.pindel.config -o ${pair_id}.pindel_out --report_inversions false $bedopt
     pindel2vcf -P ${pair_id}.pindel_out -r ${reffa} -R HG38 -d ${genomefiledate} -v pindel.vcf
     cat pindel.vcf | java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].AD[1] >= 10 )" | bgzip > pindel.vcf.gz
     tabix pindel.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p pindel -v pindel.vcf.gz
     perl $baseDir/parse_pindel.pl ${pair_id} pindel.norm.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.indel.vcf |bgzip > ${pair_id}.pindel_indel.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${bed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
+    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.dup.vcf | bedtools intersect -header -b ${itdbed} -a stdin | bgzip > ${pair_id}.pindel_tandemdup.vcf.gz
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} ${pair_id}.sv.vcf | bgzip > ${pair_id}.pindel.sv.vcf.gz
     if [[ $filter == 1 ]]
     then
@@ -178,7 +184,7 @@ then
 elif [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
-    samtools view -@ $NPROC -L ${bed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${bed} -a stdin | java -Xmx30g -jar $SNPEFF_HOME/SnpSift.jar filter "( LEN < 10000 )" | bgzip > ${pair_id}.itdseek.vcf.gz
+    samtools view -@ $NPROC -L ${itdbed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | java -Xmx30g -jar $SNPEFF_HOME/SnpSift.jar filter "( LEN < 10000 )" | bgzip > ${pair_id}.itdseek.vcf.gz
     
     tabix ${pair_id}.itdseek.vcf.gz
     
