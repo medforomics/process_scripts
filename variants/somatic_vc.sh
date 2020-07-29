@@ -82,10 +82,10 @@ else
 fi
 baseDir="`dirname \"$0\"`"
 
-cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' > intervals.txt
+interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
 if [[ -n $tbed ]]
 then
-    awk '{print $1":"$2"-"$3}' $tbed > intervals.txt
+    interval=$tbed
 fi
 if [[ -z $tid ]]
 then
@@ -138,7 +138,7 @@ then
     gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
     module load gatk/4.1.4.0 parallel/20150122
     threads=`expr $NPROC / 2`
-    cut -f 1 intervals.txt | parallel --delay 1 --jobs $threads "gatk --java-options \"-Xmx20g\" Mutect2 $ponopt --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.{}.vcf -L {}"
+    gatk --java-options "-Xmx20g" Mutect2 $ponopt  --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf -L $interval
     vcf-concat ${tid}.mutect.*vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then

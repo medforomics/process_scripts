@@ -136,7 +136,7 @@ then
   for i in *.bam; do
       bamlist+="-I ${i} "
   done
-  cut -f 1 intervals.txt | parallel --delay 1 --jobs $threads "gatk --java-options \"-Xmx20g\" Mutect2 $ponopt -R ${reffa} ${bamlist} -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` --output ${pair_id}.mutect.{}.vcf -L {}"
+  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` -L $interval
   vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [[ $algo == 'strelka2' ]]
 then
