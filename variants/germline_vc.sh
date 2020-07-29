@@ -66,14 +66,14 @@ else
     ponopt='';
 fi
 
+fbsplit="${index_path}/genomefile.5M.txt"
+cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' > intervals.txt
+interval=`cat intervals.txt | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+
 if [[ -n $tbed ]]
 then
+    awk '{print $1":"$2"-"$3}' $tbed > intervals.txt
     interval=$tbed
-    awk '{print $1":"$2"-"$3}' $tbed > fbsplit.genomefile.txt
-    fbsplit=fbsplit.genomefile.txt
-else
-    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
-    fbsplit="${index_path}/genomefile.5M.txt"
 fi
 
 source /etc/profile.d/modules.sh
@@ -130,12 +130,13 @@ then
 elif [ $algo == 'mutect' ]
 then
   gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
-  module load gatk/4.1.4.0
+  module load gatk/4.1.4.0 parallel/20150122
+  threads=`expr $NPROC / 2`
   bamlist=''
   for i in *.bam; do
       bamlist+="-I ${i} "
   done
-  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` -L $interval
+  cut -f 1 intervals.txt | parallel --delay 1 --jobs $threads "gatk --java-options \"-Xmx20g\" Mutect2 $ponopt -R ${reffa} ${bamlist} -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` --output ${pair_id}.mutect.{}.vcf -L {}"
   vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [[ $algo == 'strelka2' ]]
 then

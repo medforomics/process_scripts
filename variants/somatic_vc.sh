@@ -34,6 +34,10 @@ do
     esac
 done
 
+source /etc/profile.d/modules.sh
+module load htslib/gcc/1.8 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
+
 shift $(($OPTIND -1))
 
 #Check for mandatory options
@@ -78,11 +82,10 @@ else
 fi
 baseDir="`dirname \"$0\"`"
 
+cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' > intervals.txt
 if [[ -n $tbed ]]
 then
-    interval=$tbed
-else
-    interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
+    awk '{print $1":"$2"-"$3}' $tbed > intervals.txt
 fi
 if [[ -z $tid ]]
 then
@@ -93,10 +96,6 @@ then
     nid=`samtools view -H ${normal} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 fi
 
-
-source /etc/profile.d/modules.sh
-module load htslib/gcc/1.8 samtools/gcc/1.8 snpeff/4.3q vcftools/0.1.14
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 if [ $algo == 'strelka2' ]
 then
@@ -125,7 +124,6 @@ then
     configureStrelkaSomaticWorkflow.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --targeted --runDir strelka $mantaopt
     strelka/runWorkflow.py -m local -j 8
     vcf-concat strelka/results/variants/*.vcf.gz | vcf-annotate -n --fill-type -n |vcf-sort |java -jar $SNPEFF_HOME/SnpSift.jar filter "(GEN[*].DP >= 10)" | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" |bgzip > ${pair_id}.strelka2.vcf.gz
-fi
 elif [ $algo == 'virmid' ]
 then 
     module load virmid/1.2
@@ -138,9 +136,10 @@ then
 elif [ $algo == 'mutect' ]
 then
     gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
-    module load gatk/4.1.4.0 picard/2.10.3
-    gatk --java-options "-Xmx20g" Mutect2 $ponopt --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf -L $interval
-    vcf-sort ${tid}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+    module load gatk/4.1.4.0 parallel/20150122
+    threads=`expr $NPROC / 2`
+    cut -f 1 intervals.txt | parallel --delay 1 --jobs $threads "gatk --java-options \"-Xmx20g\" Mutect2 $ponopt --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.{}.vcf -L {}"
+    vcf-concat ${tid}.mutect.*vcf | vcf-sort | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [ $algo == 'varscan' ]
 then
     module load bcftools/gcc/1.8 VarScan/2.4.2
