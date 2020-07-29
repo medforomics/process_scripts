@@ -103,14 +103,14 @@ then
     opt=''
     if [[ -n $tbed ]]
     then
-	if [[ -f $tbed ]]
+	if [[ -f "${tbed}.gz" ]]
 	then
 	    opt="--callRegions ${tbed}.gz"
 	else
-	    cp $tbed targetpanel.bed
-	    bgzip targetpanel.bed
-	    tabix targetpanel.bed.gz
-	    opt="--callRegions targetpanel.bed.gz"
+	    cp $tbed panel.bed
+	    bgzip panel.bed
+	    tabix panel.bed.gz
+	    opt="--callRegions panel.bed.gz"
 	fi
     fi
     mkdir manta     
