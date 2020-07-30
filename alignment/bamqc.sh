@@ -79,7 +79,8 @@ fi
 
 if [[ $nuctype == 'dna' ]]
 then
-    bedtools coverage -a ${bed} -b ${sbam} -hist > ${pair_id}.covhist.txt
+    bedtools sort -faidx $index_path/genome.fa.fai -i ${bed} > panel.sorted.bed
+    bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a panel.sorted.bed -b ${sbam} -hist > ${pair_id}.covhist.txt
     grep ^all ${pair_id}.covhist.txt >  ${pair_id}.genomecov.txt
     perl $baseDir/calculate_depthcov.pl ${pair_id}.covhist.txt
     if [[ -z $skiplc ]]
@@ -87,8 +88,8 @@ then
 	samtools view -@ $threads -b -L ${bed} -o ${pair_id}.ontarget.bam ${sbam}
 	samtools index -@ $threads ${pair_id}.ontarget.bam
 	samtools flagstat  ${pair_id}.ontarget.bam > ${pair_id}.ontarget.flagstat.txt
-	samtools view  -@ $threads -b -q 1 ${sbam} | bedtools coverage -hist -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
 	java -Xmx64g -Djava.io.tmpdir=${tmpdir} -XX:ParallelGCThreads=$threads -jar $PICARD/picard.jar EstimateLibraryComplexity BARCODE_TAG=RG I=${sbam} OUTPUT=${pair_id}.libcomplex.txt TMP_DIR=${tmpdir}
+	#samtools view  -@ $threads -b -q 1 ${sbam} | bedtools coverage -hist -b stdin -a ${bed} > ${pair_id}.mapqualcov.txt
 	#java -Xmx64g -Djava.io.tmpdir=${tmpdir} -jar $PICARD/picard.jar CollectAlignmentSummaryMetrics R=${index_path}/genome.fa I=${pair_id}.ontarget.bam OUTPUT=${pair_id}.alignmentsummarymetrics.txt TMP_DIR=${tmpdir}
 	#samtools view  -@ $threads ${sbam} | awk '{sum+=$5} END { print "Mean MAPQ =",sum/NR}' > ${pair_id}.meanmap.txt
     fi
