@@ -45,7 +45,7 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
-threads=`expr $NPROC - 10`
+threads=`expr $NPROC`
 
 if [[ -n $user ]]
 then
