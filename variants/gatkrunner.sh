@@ -35,24 +35,16 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
-if [[ -a "${index_path}/dbSnp.gatk4.vcf.gz" ]]
+
+dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
+if [[ ! -f "${index_path}/dbSnp.gatk4.vcf.gz" ]]
 then
-    dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
-else 
     echo "Missing dbSNP File: ${index_path}/dbSnp.gatk4.vcf.gz"
     usage
 fi
-if [[ -a "${index_path}/GoldIndels.vcf.gz" ]]
+reffa="${index_path}/genome.fa"
+if [[ ! -f "${index_path}/genome.fa" ]]
 then
-    knownindel="${index_path}/GoldIndels.vcf.gz"
-else 
-    echo "Missing InDel File: ${index_path}/GoldIndels.vcf.gz"
-    usage
-fi
-if [[ -a "${index_path}/genome.fa" ]]
-then
-    reffa="${index_path}/genome.fa"
-else 
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
@@ -62,6 +54,6 @@ module load gatk/4.1.4.0 samtools/gcc/1.8
 which samtools
 samtools index -@ $NPROC ${sbam}
 
-gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites ${index_path}/dbSnp.gatk4.vcf.gz -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
+gatk --java-options "-Xmx32g" BaseRecalibrator -I ${sbam} --known-sites $dbsnp -R ${reffa} -O ${pair_id}.recal_data.table --use-original-qualities
 gatk --java-options "-Xmx32g" ApplyBQSR -I ${sbam} -R ${reffa} -O ${pair_id}.final.bam --use-original-qualities -bqsr ${pair_id}.recal_data.table
 samtools index -@ $NPROC ${pair_id}.final.bam
