@@ -1,4 +1,4 @@
-#!/bin/bash
+nucleu#!/bin/bash
 #germline_vc.sh
 
 usage() {
@@ -36,21 +36,7 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
-if [[ -s "${index_path}/dbSnp.vcf.gz" ]]
-then
-    dbsnp="${index_path}/dbSnp.vcf.gz"
-    gatk4_dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
-else 
-    echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
-    usage
-fi
-if [[ -s "${index_path}/GoldIndels.vcf.gz" ]]
-then
-    knownindel="${index_path}/GoldIndels.vcf.gz"
-else 
-    echo "Missing InDel File: ${index_path}/GoldIndels.vcf.gz"
-    usage
-fi
+
 if [[ -s "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
@@ -112,6 +98,12 @@ then
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz
 elif [[ $algo == 'gatk' ]]
 then
+    gatk4_dbsnp="${index_path}/dbSnp.gatk4.vcf.gz"
+    if [[ ! -f "${index_path}/dbSnp.gatk4.vcf.gz" ]]
+    then
+	echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
+	usage
+    fi
     user=$USER
     module load gatk/4.1.4.0
     gvcflist=''
@@ -129,7 +121,6 @@ then
     tabix ${pair_id}.gatk.vcf.gz
 elif [ $algo == 'mutect' ]
 then
-  gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
   module load gatk/4.1.4.0 parallel/20150122
   threads=`expr $NPROC / 2`
   bamlist=''

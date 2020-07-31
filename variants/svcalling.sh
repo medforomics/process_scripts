@@ -11,7 +11,7 @@ usage() {
   exit 1
 }
 OPTIND=1 # Reset OPTIND
-while getopts :r:p:b:t:x:c:y:n:l:a:hf opt
+while getopts :r:p:b:t:x:c:g:y:n:l:a:hf opt
 do
     case $opt in
         r) index_path=$OPTARG;;
@@ -22,6 +22,7 @@ do
         x) tid=$OPTARG;;
         y) nid=$OPTARG;;
 	f) filter=1;;
+	g) snpeffgeno=$OPTARG;;
         b) sbam=$OPTARG;;
 	c) tbed=$OPTARG;;
 	l) itdbed=$OPTARG;;

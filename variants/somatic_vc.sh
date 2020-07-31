@@ -56,7 +56,6 @@ if [[ -f $pon ]]
 then
     ponopt="--pon $pon"
 fi
-
 if [[ -a "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
@@ -65,21 +64,7 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
-if [[ -a "${index_path}/dbSnp.vcf.gz" ]]
-then
-    dbsnp="${index_path}/dbSnp.vcf.gz"
-else 
-    echo "Missing dbSNP File: ${index_path}/dbSnp.vcf.gz"
-    usage
-fi
 
-if [[ -a "${index_path}/cosmic.vcf.gz" ]]
-then
-    cosmic=${index_path}/cosmic.vcf.gz
-else 
-    echo "Missing InDel File: ${index_path}/cosmic.vcf.gz"
-    usage
-fi
 baseDir="`dirname \"$0\"`"
 
 interval=`cat ${reffa}.fai |cut -f 1 |grep -v decoy |grep -v 'HLA' |grep -v alt |grep -v 'chrUn' |grep -v 'random' | perl -pe 's/\n/ -L /g' |perl -pe 's/-L $//'`
@@ -95,7 +80,6 @@ if [[ -z $nid ]]
 then
     nid=`samtools view -H ${normal} |grep '^@RG' |perl -pi -e 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 fi
-
 
 if [ $algo == 'strelka2' ]
 then
@@ -127,6 +111,12 @@ then
 elif [ $algo == 'virmid' ]
 then 
     module load virmid/1.2
+    cosmic=${index_path}/cosmic.vcf.gz
+    if [[ ! -f "${index_path}/cosmic.vcf.gz" ]]
+    then
+	echo "Missing InDel File: ${index_path}/cosmic.vcf.gz"
+	usage
+    fi
     virmid -R ${reffa} -D ${tumor} -N ${normal} -s ${cosmic} -t $NPROC -M 2000 -c1 10 -c2 10
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.som.passed.vcf
     perl $baseDir/addgt_virmid.pl ${tumor}.virmid.loh.passed.vcf
@@ -135,7 +125,6 @@ then
     vcf-concat *gt.vcf | vcf-sort | vcf-annotate -n --fill-type -n | java -jar $SNPEFF_HOME/SnpSift.jar filter '((NDP >= 10) & (DDP >= 10))' | perl -pe "s/TUMOR/${tid}/g" | perl -pe "s/NORMAL/${nid}/g" | bgzip > ${pair_id}.virmid.vcf.gz
 elif [ $algo == 'mutect' ]
 then
-    gatk4_dbsnp=${index_path}/clinseq_prj/dbSnp.gatk4.vcf.gz
     module load gatk/4.1.4.0 parallel/20150122
     threads=`expr $NPROC / 2`
     gatk --java-options "-Xmx20g" Mutect2 $ponopt  --independent-mates -RF AllowAllReadsReadFilter -R ${reffa} -I ${tumor} -tumor ${tid} -I ${normal} -normal ${nid} --output ${tid}.mutect.vcf -L $interval
