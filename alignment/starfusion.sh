@@ -68,7 +68,7 @@ else
     refgeno=${index_path}/CTAT_resource_lib
     STAR-Fusion --genome_lib_dir ${refgeno} --min_sum_frags 3 --CPU $NPROC --left_fq ${fq1} --right_fq ${fq2} --examine_coding_effect --output_dir ${pair_id}_star_fusion
     cp ${pair_id}_star_fusion/star-fusion.fusion_predictions.abridged.coding_effect.tsv ${pair_id}.starfusion.txt
-    cut -f 7-10 ${pair_id}.starfusion.txt |perl -pe 's/\^|:/\t/g' | awk '{print "agfusion annotate  -db agfusion.homo_sapiens.95.db -g5", $1,"-j5",$4,"-g3",$6,"-j3",$9,"-o",$1"_"$4"_"$6"_"$9}' |grep -v 'LeftGene' |sh
+    cut -f 7-10 ${pair_id}.starfusion.txt |perl -pe 's/\^|:/\t/g' | awk '{print "agfusion annotate  -db /usr/local/src/agfusion.homo_sapiens.95.db -g5", $1,"-j5",$4,"-g3",$6,"-j3",$9,"-o",$1"_"$4"_"$6"_"$9}' |grep -v 'LeftGene' |sh
     cut -f 8,10 ${pair_id}.starfusion.txt |grep -v Breakpoint |perl -pe 's/\t/\n/g' |awk -F ':' '{print $1"\t"$2-1"\t"$2}' > temp.bed
     bedtools intersect -wao -a temp.bed -b ${index_path}/cytoBand.txt |cut -f 1,2,7 > cytoband_pos.txt
     if [[ $filter == 1 ]]
