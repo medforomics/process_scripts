@@ -11,7 +11,19 @@ foreach $file (@discreet) {
     while (my $line = <IN>) {
 	chomp($line);
 	my ($chr,$s,$e,$ct,$gene) = split(/\t/,$line);
-	$cts{$gene}{$sample} = $ct;
+	my $discreet = 0;
+	if ($ct == 1) {
+	    $discreet = -1;
+	}elsif ($ct == 0) {
+	    $discreet = -2;
+	}elsif ($ct == 3) {
+	    $discreet = 1;
+	}elsif ($ct > 3) {
+	    $discreet = 2;
+	}elsif ($ct eq 'NA') {
+	    $ct = '';
+	}
+	$cts{$gene}{$sample} = $discreet;
     }
 }
 my @samples = sort {$a cmp $b} keys %sample;
@@ -20,14 +32,14 @@ print OUT join("\t",'Hugo_Symbol',@samples),"\n";
 foreach my $gene (keys %cts) {
     my @line;
     foreach my $sid (@samples) {
-	$cts{$gene}{$sid} = 2 unless ($cts{$gene}{$sid});
+	$cts{$gene}{$sid} = 0 unless (exists $cts{$gene}{$sid});
 	push @line, $cts{$gene}{$sid};
     }
     print OUT join("\t",$gene,@line),"\n";
 }
 
 my @continuous = `ls *cnv_continuous.txt`;
-    my %cts;
+my %cts;
 my %sample;
 foreach $file (@continuous) {
     open IN, "<$file" or die $!;

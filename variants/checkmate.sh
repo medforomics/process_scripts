@@ -50,9 +50,9 @@ for i in *.bam; do
     bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -T ${capture} $i | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o ${prefix}.vcf
 done
 
-if [[ -f /project/shared/bicf_workflow_ref/seqprg/bin/ncm.py ]]
+if [[ -f /project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py ]]
 then
-    ncm=/project/shared/bicf_workflow_ref/seqprg/bin/ncm.py
+    ncm=/project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py
 elif [[ -f /usr/local/bin/ncm.py ]]
 then
     ncm=/usr/local/bin/ncm.py
