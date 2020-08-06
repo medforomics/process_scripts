@@ -1,4 +1,4 @@
-nucleu#!/bin/bash
+#!/bin/bash
 #germline_vc.sh
 
 usage() {
