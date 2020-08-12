@@ -86,7 +86,9 @@ then
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    cut -f 1 $fbsplit | parallel --memfree 2G --delay 1 --jobs 0 "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    #--memfree 2G for DNANexus
+
+    cut -f 1 $fbsplit | parallel --delay 1 --jobs 0 "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.fb.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then

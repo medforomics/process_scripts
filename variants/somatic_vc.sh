@@ -142,6 +142,7 @@ then
 elif [ $algo == 'shimmer' ]
 then
     module load R/3.6.1-gccmkl
+    module rm perl/5.18.2
     shimmer.pl --minqual 25 --ref ${reffa} ${normal} ${tumor} --outdir shimmer 2> shimmer.err
     perl $baseDir/add_readct_shimmer.pl
     module rm java/oracle/jdk1.7.0_51
