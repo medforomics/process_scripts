@@ -29,12 +29,16 @@ done
 shift $(($OPTIND -1))
 
 # Check for mandatory options
-if [[ -z $pair_id ]] || [[ -z $fq1 ]]; then
+if [[ -z $pair_id ]]
+then
     usage
 fi
 
-source /etc/profile.d/modules.sh
-module load  samtools/1.6 picard/2.10.3
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load  samtools/1.6 picard/2.10.3
+fi
 baseDir="`dirname \"$0\"`"
 NPROC=$SLURM_CPUS_ON_NODE
 if [[ -z $NPROC ]]
@@ -42,28 +46,51 @@ then
     NPROC=`nproc`
 fi
 
+fqs=''
+i=0
+numfq=${#fqs[@]}
+while [[ $i -le $numfq ]]
+do
+    fqs="$fqs $1"
+    i=$((i + 1))
+    shift 1
+done
+hisat_opt=''
 diff $fq1 $fq2 > difffile
+if [[ -f $fq1 ]]
+then
+    fqs="$fq1"
+fi
+if [[ -f $fq2 ]] && [[ -s difffile ]]
+then
+    fqs+=" $fq2"
+fi
+numfq=${#fqs[@]}
+
+star_opt=$fqs
+fqarray=($fqs)
+if [[ $numfq == 1 ]]
+then
+    hisat_opt="-1 ${fqarray[0]} -2 ${fqarray[1]}"
+else
+    hisat_opt="-U $fqarray[0]"
+fi
 
 if [ $algo == 'star' ]
 then
-    if [ -s difffile ]
+    if [[ -z $isdocker ]]
     then
 	module load star/2.4.2a
-	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 $fq2 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
-    else
-	module load star/2.4.2a
-	STAR --genomeDir ${index_path}/star_index/ --readFilesIn $fq1 --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
     fi
+    STAR --genomeDir ${index_path}/star_index/ --readFilesIn $star_opt --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
     mv outLog.final.out ${pair_id}.alignerout.txt
     mv outAligned.sortedByCoord.out.bam ${pair_id}.bam
 else
-    module load hisat2/2.1.0-intel
-    if [ -s difffile ]
+    if [[ -z $isdocker ]]
     then
-        hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -1 $fq1 -2 $fq2 -S out.sam --summary-file ${pair_id}.alignerout.txt
-    else
-	hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome -U $fq1 -S out.sam --summary-file ${pair_id}.alignerout.txt
+	module load hisat2/2.1.0-intel
     fi
+    hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --no-unal --dta -x ${index_path}/genome $hisat_opt -S out.sam --summary-file ${pair_id}.alignerout.txt
     if [[ $umi == 1 ]]
     then
 	python ${baseDir}/add_umi_sam.py -s out.sam -o output.bam

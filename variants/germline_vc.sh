@@ -86,14 +86,15 @@ then
     if [[ -z $isdocker ]]
     then
 	module load freebayes/gcc/1.2.0 parallel/20150122
+	paropt="--delay 2 -j $NPROC"
+    else
+	paropt="--delay 1 --jobs 0 --memfree 2G"
     fi
     bamlist=''
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
     done
-    #--memfree 2G for DNANexus
-
-    cut -f 1 $fbsplit | parallel --delay 1 --jobs 0 "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
+    cut -f 1 $fbsplit | parallel ${paropt} "freebayes -f ${index_path}/genome.fa  --min-mapping-quality 0 --min-base-quality 20 --min-coverage 10 --min-alternate-fraction 0.01 -C 3 --use-best-n-alleles 3 -r {} ${bamlist} > fb.{}.vcf"
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.fb.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then
