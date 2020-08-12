@@ -28,17 +28,23 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
-# Check for mandatory options
-source /etc/profile.d/modules.sh	
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:/usr/local/bin/:$PATH
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh	
+    module load samtools/gcc/1.8 bcftools/gcc/1.8
+    ncm=/project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py
+fi
 
-module load samtools/gcc/1.8 bcftools/gcc/1.8
+export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:/usr/local/bin/:$PATH
+if [[ -f /usr/local/bin/ncm.py ]]
+then
+    ncm=/usr/local/bin/ncm.py
+fi
 
 if [[ -z $capture ]]
 then
     capture="${index_path}/NGSCheckMate.bed"
 fi
-
 if [[ -f "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
@@ -49,16 +55,6 @@ for i in *.bam; do
     echo ${prefix}
     bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -T ${capture} $i | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o ${prefix}.vcf
 done
-
-if [[ -f /project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py ]]
-then
-    ncm=/project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py
-elif [[ -f /usr/local/bin/ncm.py ]]
-then
-    ncm=/usr/local/bin/ncm.py
-else
-    echo "ncm missing"
-fi
 
 python $ncm -V -d ./ -bed $capture -O ./ -N ${pair_id}
 perl $baseDir/sequenceqc_somatic.pl -i ${pair_id}_all.txt -o ${pair_id}.sequence.stats.txt

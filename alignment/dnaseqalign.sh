@@ -51,13 +51,16 @@ else
     testexe='/usr/local/bin'
 fi
 
-source /etc/profile.d/modules.sh
-module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load  python/2.7.x-anaconda bwakit/0.7.15 samtools/gcc/1.8 picard/2.10.3 bwa/intel/0.7.17
+fi
 
 baseDir="`dirname \"$0\"`"
 
 diff $fq1 $fq2 > difffile
-module load bwa/intel/0.7.17
+
 
 
 if [ -s difffile ]

@@ -55,9 +55,12 @@ if [[ $numfq == 1 ]]
 then
     copts="$copts --paired"
 fi
-    
-source /etc/profile.d/modules.sh
-module load trimgalore/0.6.4 cutadapt/2.5
+
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load trimgalore/0.6.4 cutadapt/2.5
+fi
 trim_galore $copts ${fqs}
 files=`find ./ -name "*_val_1.fq.gz"`
 

@@ -37,10 +37,11 @@ if [[ -z $snpeffgeno ]]
 then
     snpeffgeno='GRCh38.86'
 fi
-
-source /etc/profile.d/modules.sh
-module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
-
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load bedtools/2.26.0 samtools/1.6 bcftools/1.6 snpeff/4.3q 
+fi
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 perl $baseDir\/uniform_vcf_gt.pl $pair_id $vcf

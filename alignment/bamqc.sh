@@ -64,8 +64,12 @@ then
     parseopt="$parseopt -r $index_path"
 fi
 tmpdir=`pwd`
-source /etc/profile.d/modules.sh
-module load samtools/gcc/1.10 fastqc/0.11.8 bedtools/2.29.0 picard/2.10.3
+
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load samtools/gcc/1.10 fastqc/0.11.8 bedtools/2.29.0 picard/2.10.3
+fi
 
 samtools flagstat ${sbam} > ${pair_id}.flagstat.txt
 fastqc -f bam ${sbam}

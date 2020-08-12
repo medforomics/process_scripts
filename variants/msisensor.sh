@@ -30,7 +30,6 @@ if [[ -z $sbam ]] || [[ -z $index_path ]]; then
     usage
 fi
 
-source /etc/profile.d/modules.sh	
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 
 bedopt=''

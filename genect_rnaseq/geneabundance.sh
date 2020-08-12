@@ -40,8 +40,11 @@ if [[ $NPROC > 64 ]]
 then
     NPROC=64
 fi
-source /etc/profile.d/modules.sh
-module load subread/1.6.1
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load subread/1.6.1
+fi
 baseDir="`dirname \"$0\"`"
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 

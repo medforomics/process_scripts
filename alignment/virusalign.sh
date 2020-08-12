@@ -34,8 +34,11 @@ then
 fi
 
 reffa=${ref}/idt_virus_reference.fa
-source /etc/profile.d/modules.sh
-module load bwa/intel/0.7.17 picard/2.10.3 samtools/1.6 
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load bwa/intel/0.7.17 picard/2.10.3 samtools/1.6 
+fi
 baseDir="`dirname \"$0\"`"
 
 samtools view -@ 8 -b -u -F 2 ${bam} |samtools sort -n - >unmapped.bam

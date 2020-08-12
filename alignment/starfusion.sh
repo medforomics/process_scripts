@@ -38,9 +38,12 @@ then
 fi
 
 baseDir="`dirname \"$0\"`"
-source /etc/profile.d/modules.sh
-module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
 
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
+fi
 
 if [[ -n $method ]] && [[ $method == 'trinity' ]]
 then

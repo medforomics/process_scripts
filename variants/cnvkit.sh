@@ -63,8 +63,11 @@ capture="$paneldir/targetpanel.bed"
 targets="$paneldir/cnvkit."
 normals="$paneldir/pon.cnn"
 
-source /etc/profile.d/modules.sh
-module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 java/oracle/jdk1.8.0_171 snpeff/4.3q
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 java/oracle/jdk1.8.0_171 snpeff/4.3q
+fi
 
 if [[ -f "${paneldir}/pon.downsample.cnn" ]]
 then
@@ -100,8 +103,6 @@ fi
 
 if [[ $numsnps -gt 100 ]]
 then
-    #samtools index ${sbam}
-    #java -jar /cm/shared/apps/gatk/3.8/target/package/GenomeAnalysisTK.jar -T UnifiedGenotyper -R ${reffa} --output_mode EMIT_ALL_SITES -L ${index_path}/IDT_snps.hg38.bed -o common_variants.vcf -glm BOTH -dcov 10000 -I ${sbam}
     bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -a INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR -T ${index_path}/IDT_snps.hg38.bed ${sbam} | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o common_variants.vcf
     $baseDir/formatVcfCNV.pl cnvkit_common common_variants.vcf
     echo -e "CHROM\tPOS\tAO\tRO\tDP\tMAF" > ${pair_id}.ballelefreq.txt

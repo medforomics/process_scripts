@@ -48,17 +48,18 @@ fi
 
 baseDir="`dirname \"$0\"`"
 
-source /etc/profile.d/modules.sh
-module load picard/2.10.3
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load picard/2.10.3
+fi
 
-if [ $algo == 'sambamba' ]
+if [ $algo == 'samtools' ]
 then
-    module load speedseq/20160506
-    sambamba markdup -t $NPROC ${sbam} ${pair_id}.dedup.bam
-    touch ${pair_id}.dedup.stat.txt
-elif [ $algo == 'samtools' ]
-then
-    module load samtools/gcc/1.8
+    if [[ -z $isdocker ]]
+    then
+	module load samtools/gcc/1.8
+    fi
     samtools markdup -s --output-fmt BAM -@ $NPROC sort.bam ${pair_id}.dedup.bam
     touch ${pair_id}.dedup.stat.txt
 elif [ $algo == 'picard' ]
@@ -69,7 +70,10 @@ then
     java -XX:ParallelGCThreads=$NPROC -Djava.io.tmpdir=./ -Xmx16g  -jar $PICARD/picard.jar MarkDuplicates BARCODE_TAG=RX I=${sbam} O=${pair_id}.dedup.bam M=${pair_id}.dedup.stat.txt
 elif [ $algo == 'fgbio_umi' ]   
 then
-    module load fgbio bwakit/0.7.15 bwa/intel/0.7.17 samtools/gcc/1.8
+    if [[ -z $isdocker ]]
+    then
+	module load fgbio bwakit/0.7.15 bwa/intel/0.7.17 samtools/gcc/1.8
+    fi
     samtools index -@ $NPROC ${sbam}
     fgbio --tmp-dir ./ GroupReadsByUmi -s identity -i ${sbam} -o group.bam --family-size-histogram ${pair_id}.umihist.txt -e 0 -m 0
     fgbio --tmp-dir ./ CallMolecularConsensusReads -i group.bam -p consensus -M 1 -o ${pair_id}.consensus.bam -S ':none:'
@@ -90,5 +94,8 @@ then
 else
     cp ${sbam} ${pair_id}.dedup.bam    
 fi
-module load samtools/gcc/1.8
+if [[ -z $isdocker ]]
+then
+    module load samtools/gcc/1.8
+fi
 samtools index -@ $NPROC ${pair_id}.dedup.bam

@@ -49,8 +49,11 @@ then
     usage
 fi
 
-source /etc/profile.d/modules.sh
-module load gatk/4.1.4.0 samtools/gcc/1.8
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load gatk/4.1.4.0 samtools/gcc/1.8
+fi
 which samtools
 samtools index -@ $NPROC ${sbam}
 
