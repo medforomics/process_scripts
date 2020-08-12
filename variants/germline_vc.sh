@@ -62,9 +62,11 @@ then
     interval=$tbed
 fi
 
-source /etc/profile.d/modules.sh
-module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
-
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load python/2.7.x-anaconda picard/2.10.3 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14 parallel
+fi
 for i in *.bam; do
     if [[ ! -f ${i}.bai ]]
     then
@@ -81,7 +83,10 @@ then
     bgzip ${pair_id}.sam.vcf
 elif [[ $algo == 'fb' ]]
 then
-    module load freebayes/gcc/1.2.0 parallel/20150122
+    if [[ -z $isdocker ]]
+    then
+	module load freebayes/gcc/1.2.0 parallel/20150122
+    fi
     bamlist=''
     for i in *.bam; do
     bamlist="$bamlist --bam ${PWD}/${i}"
@@ -92,7 +97,10 @@ then
     vcf-concat fb.*.vcf | vcf-sort | vcf-annotate -n --fill-type | bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.fb.vcf.gz -
 elif [[ $algo == 'platypus' ]]
 then
-    module load platypus/gcc/0.8.1
+    if [[ -z $isdocker ]]
+    then
+	module load platypus/gcc/0.8.1
+    fi
     bamlist=`join_by , *.bam`
     Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$NPROC --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
@@ -107,7 +115,10 @@ then
 	usage
     fi
     user=$USER
-    module load gatk/4.1.4.0
+    if [[ -z $isdocker ]]
+    then
+	module load gatk/4.1.4.0
+    fi
     gvcflist=''
     for i in *.bam; do
 	prefix="${i%.bam}"
@@ -123,14 +134,17 @@ then
     tabix ${pair_id}.gatk.vcf.gz
 elif [ $algo == 'mutect' ]
 then
-  module load gatk/4.1.4.0 parallel/20150122
-  threads=`expr $NPROC / 2`
-  bamlist=''
-  for i in *.bam; do
-      bamlist+="-I ${i} "
-  done
-  gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` -L $interval
-  vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
+    if [[ -z $isdocker ]]
+    then
+	module load gatk/4.1.4.0 parallel/20150122
+    fi
+    threads=`expr $NPROC / 2`
+    bamlist=''
+    for i in *.bam; do
+	bamlist+="-I ${i} "
+    done
+    gatk --java-options "-Xmx20g" Mutect2 $ponopt -R ${reffa} ${bamlist} --output ${pair_id}.mutect.vcf -RF AllowAllReadsReadFilter --independent-mates  --tmp-dir `pwd` -L $interval
+    vcf-sort ${pair_id}.mutect.vcf | vcf-annotate -n --fill-type | java -jar $SNPEFF_HOME/SnpSift.jar filter -p '(GEN[*].DP >= 10)' | bgzip > ${pair_id}.mutect.vcf.gz
 elif [[ $algo == 'strelka2' ]]
 then
     opt=''
@@ -152,7 +166,10 @@ then
     else
 	mode="--exome"
     fi
-    module load strelka/2.9.10 manta/1.3.1
+    if [[ -z $isdocker ]]
+    then
+	module load strelka/2.9.10 manta/1.3.1
+    fi
     mkdir manta strelka
     gvcflist=''
     for i in *.bam; do

@@ -58,9 +58,11 @@ if [[ -z $snpeffgeno ]]
 then
     snpeffgeno='GRCh38.86'
 fi
-
-source /etc/profile.d/modules.sh	
-module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh	
+    module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+fi
 export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 mkdir -p temp
 
@@ -146,7 +148,10 @@ then
     java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
 elif [[ $method == 'pindel' ]]
 then
-    module load pindel/0.2.5-intel
+    if [[ -z $isdocker ]]
+    then
+	module load pindel/0.2.5-intel
+    fi
     genomefiledate=`find ${reffa} -maxdepth 0 -printf "%TY%Tm%Td\n"`
     touch ${pair_id}.pindel.config
     for i in *.bam; do
