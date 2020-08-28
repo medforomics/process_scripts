@@ -23,8 +23,11 @@ done
 
 shift $(($OPTIND -1))
 
-source /etc/profile.d/modules.sh
-module load bedtools/2.26.0  snpeff/4.3q
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load bedtools/2.26.0  snpeff/4.3q
+fi
 
 if [[ $index_path == '/project/shared/bicf_workflow_ref/human/grch38_cloud/rnaref' ]]
 then

@@ -93,6 +93,7 @@ while (my $line = <VCF>) {
 	  $gtdata{DP} = $gtdata{NR}; 	
 	  $gtdata{AO} = $gtdata{NV};
 	  $gtdata{RO} = $gtdata{DP} - $gtdata{AO};
+	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
       } elsif (exists $gtdata{AO} && exists $gtdata{RO}) {
 	  $gtdata{AD} = join(',',$gtdata{RO},$gtdata{AO});
 	  $gtdata{DP} = $gtdata{RO};
