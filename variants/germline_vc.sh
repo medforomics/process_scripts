@@ -83,12 +83,15 @@ then
     bgzip ${pair_id}.sam.vcf
 elif [[ $algo == 'fb' ]]
 then
+    paropt="--delay 1 --jobs 0 --memfree 2G"
     if [[ -z $isdocker ]]
     then
 	module load freebayes/gcc/1.2.0 parallel/20150122
 	paropt="--delay 2 -j $NPROC"
-    else
-	paropt="--delay 1 --jobs 0 --memfree 2G"
+    fi
+    if [[ -n $biohpc ]]
+    then
+	paropt="--delay 2 -j $NPROC"
     fi
     bamlist=''
     for i in *.bam; do
