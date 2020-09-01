@@ -45,35 +45,43 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
-
-fqs=''
-i=0
-numfq=${#fqs[@]}
-while [[ $i -le $numfq ]]
-do
-    fqs="$fqs $1"
-    i=$((i + 1))
-    shift 1
-done
-hisat_opt=''
-diff $fq1 $fq2 > difffile
 if [[ -f $fq1 ]]
 then
     fqs="$fq1"
+    if [[ -f $fq2 ]]
+    then
+	diff $fq1 $fq2 > difffile
+	if [[ -s difffile ]]
+	then
+	    fqs+=" $fq2"
+	fi
+    fi
+else
+    fqs=''
+    i=0
+    numfq=${#fqs[@]}
+    while [[ $i -le $numfq ]]
+    do
+	fqs="$fqs $1"
+	i=$((i + 1))
+	shift 1
+    done
 fi
-if [[ -f $fq2 ]] && [[ -s difffile ]]
-then
-    fqs+=" $fq2"
-fi
-numfq=${#fqs[@]}
+numfq=0
+for k in $fqs
+do
+    numfq=$((numfq + 1))
+done
 
+hisat_opt=''
 star_opt=$fqs
 fqarray=($fqs)
-if [[ $numfq == 1 ]]
+
+if [[ $numfq == 2 ]]
 then
     hisat_opt="-1 ${fqarray[0]} -2 ${fqarray[1]}"
 else
-    hisat_opt="-U $fqarray[0]"
+    hisat_opt="-U ${fqarray[0]}"
 fi
 
 if [ $algo == 'star' ]
