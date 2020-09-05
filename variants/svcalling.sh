@@ -62,8 +62,8 @@ if [[ -z $isdocker ]]
 then
     source /etc/profile.d/modules.sh	
     module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+    export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 fi
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 mkdir -p temp
 
 if [[ -z $tid ]]

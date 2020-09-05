@@ -33,9 +33,9 @@ then
     source /etc/profile.d/modules.sh	
     module load samtools/gcc/1.8 bcftools/gcc/1.8
     ncm=/project/shared/bicf_workflow_ref/seqprg/NGSCheckMate/ncm.py
+    export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 fi
 
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:/usr/local/bin/:$PATH
 if [[ -f /usr/local/bin/ncm.py ]]
 then
     ncm=/usr/local/bin/ncm.py
