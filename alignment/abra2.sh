@@ -17,7 +17,7 @@ do
         r) index_path=$OPTARG;;
         b) sbam=$OPTARG;;
         p) pair_id=$OPTARG;;
-	c) tbed==$OPTARG;;
+	c) tbed=$OPTARG;;
         h) usage;;
     esac
 done
@@ -54,5 +54,5 @@ fi
 which samtools
 samtools index -@ $NPROC ${sbam}
 mkdir tmpdir
-java -Xmx16G -jar ${abrajar} ${ioopt} --ref ${index_path}/genome.fa --threads $NRPOC $opt --tmpdir tmpdir --mbq 150 --mnf 5 --mer 0.05 > abra.log
+java -Xmx16G -jar ${abrajar} ${ioopt} --ref ${index_path}/genome.fa --threads $NPROC $opt --tmpdir tmpdir --mbq 150 --mnf 5 --mer 0.05 > abra.log
 samtools index -@ $NPROC ${pair_id}.abra2.bam
