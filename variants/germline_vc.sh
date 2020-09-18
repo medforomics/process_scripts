@@ -107,6 +107,12 @@ then
     fi
     bamlist=`join_by , *.bam`
     Platypus.py callVariants --minMapQual=0 --minReads=3 --mergeClusteredVariants=1 --nCPU=$NPROC --bamFiles=${bamlist} --refFile=${reffa} --output=platypus.vcf
+    for i in *.bam
+    do
+	prefix="${i%.bam}"
+	sid=`samtools view -H ${i} |grep '^@RG' |perl -pe 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+	perl -pi -e "s/$prefix/$sid/g" platypus.vcf
+    done
     vcf-sort platypus.vcf |vcf-annotate -n --fill-type -n |bgzip > platypus.vcf.gz
     tabix platypus.vcf.gz
     bcftools norm -c s -f ${reffa} -w 10 -O z -o ${pair_id}.platypus.vcf.gz platypus.vcf.gz

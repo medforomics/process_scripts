@@ -25,8 +25,10 @@ if [[ -z $NPROC ]]
 then
     NPROC=`nproc`
 fi
-source /etc/profile.d/modules.sh
-
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+fi
 perl $baseDir/concat_cts.pl -o ./ *.cts
 perl $baseDir/concat_fpkm.pl -o ./ *.fpkm.txt
 perl $baseDir/concat_ctsum.pl -o ./ *.cts.summary

@@ -26,8 +26,12 @@ fi
 
 baseDir="`dirname \"$0\"`"
 
-source /etc/profile.d/modules.sh
-module load samtools/1.6
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load samtools/1.6
+fi
+
 for i in *.bam; do
     samtools index -@ $NPROC ${i}
 done 

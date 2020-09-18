@@ -190,6 +190,7 @@ then
 elif [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
+    echo $stexe
     samtools view -@ $NPROC -L ${itdbed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | java -Xmx30g -jar $SNPEFF_HOME/SnpSift.jar filter "( LEN < 10000 )" | bgzip > ${pair_id}.itdseek.vcf.gz
     
     tabix ${pair_id}.itdseek.vcf.gz

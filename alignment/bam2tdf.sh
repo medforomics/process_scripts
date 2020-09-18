@@ -30,8 +30,10 @@ then
 fi
 
 baseDir="`dirname \"$0\"`"
-
-source /etc/profile.d/modules.sh
-module load igvtools/2.3.71 samtools/1.6
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load igvtools/2.3.71 samtools/1.6
+exit
 samtools index  -@ $NPROC $bam
 igvtools count -z 5 $bam ${pair_id}.tdf ${index_path}/igv/human.genome
