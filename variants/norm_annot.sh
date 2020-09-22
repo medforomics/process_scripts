@@ -25,9 +25,11 @@ shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
 if [[ -z $isdocker ]]
-   source /etc/profile.d/modules.sh
-   module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
+then
+    source /etc/profile.d/modules.sh
+    module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
 fi
+
 if [[ -a "${index_path}/genome.fa" ]]
 then
     reffa="${index_path}/genome.fa"
