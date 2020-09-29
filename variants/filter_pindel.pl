@@ -43,7 +43,7 @@ foreach $file (@files) {
       $hash{$key} = $val unless ($hash{$key});
     }
     next unless ($hash{ANN});
-    next unless ($hash{ANN} =~ m/HIGH|MODERATE|LOW/);
+    #next unless ($hash{ANN} =~ m/HIGH|MODERATE|LOW/);
     my %gtinfo = ();
     my @deschead = split(/:/,$format);
   F1:foreach my $k (0..$#gtheader) {
@@ -79,15 +79,15 @@ foreach $file (@files) {
     @tumoraltct = split(/,/,$gtinfo{$opt{tumor}}{AO});
     next if ($tumoraltct[0] eq '.');
     $hash{AF} = join(",",@tumormaf);
-    next if ($tumoraltct[0] < 20);
+    next if ($tumoraltct[0] < 20 && $tumormaf[0] < 0.05);
     next if ($tumormaf[0] < 0.01);
     my $keepforvcf = 0;
     foreach $trx (split(/,/,$hash{ANN})) {
       my ($allele,$effect,$impact,$gene,$geneid,$feature,
 	  $featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	  $cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
-      next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
-      next if($effect eq 'sequence_feature');
+      #next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
+      #next if($effect eq 'sequence_feature');
       $keepforvcf = $gene;
     }
     next unless $keepforvcf;

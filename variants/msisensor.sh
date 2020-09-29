@@ -30,8 +30,10 @@ if [[ -z $sbam ]] || [[ -z $index_path ]]; then
     usage
 fi
 
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
-
+if [[ -z $isdocker ]]
+then
+    export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
+fi
 bedopt=''
 if [[ -n $capture ]]
 then

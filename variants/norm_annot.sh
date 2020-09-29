@@ -24,8 +24,11 @@ function join_by { local IFS="$1"; shift; echo "$*"; }
 shift $(($OPTIND -1))
 baseDir="`dirname \"$0\"`"
 
-source /etc/profile.d/modules.sh
-module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 snpeff/4.3q 
+fi
 
 if [[ -a "${index_path}/genome.fa" ]]
 then

@@ -62,18 +62,23 @@ if [[ -z $isdocker ]]
 then
     source /etc/profile.d/modules.sh	
     module load htslib/gcc/1.8 samtools/gcc/1.8 bcftools/gcc/1.8 bedtools/2.26.0 snpeff/4.3q vcftools/0.1.14
+    export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 fi
-export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
 mkdir -p temp
 
-if [[ -z $tid ]]
+if [[ -z $tid ]] && [[ -f ${sbam} ]]
 then
     tid=`samtools view -H ${sbam} |grep '^@RG' |perl -pe 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
 fi
 
 bams=''
 for i in *.bam; do
-    bams="$bams $i" 
+    bams="$bams $i"
+    sid=`samtools view -H ${i} |grep '^@RG' |perl -pe 's/\t/\n/g' |grep ID |cut -f 2 -d ':'`
+    if [[ $sid =~ "_T_" ]]
+    then
+	tid=$sid
+    fi
 done
 
 #RUN DELLY
@@ -90,8 +95,9 @@ then
     java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 )" ${pair_id}.delly.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.delly.vcf.gz
     if [[ $filter == 1 ]]
     then
-	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u > ${pair_id}.dgf.txt
+	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion|transcript_ablation' | sort -u > ${pair_id}.dgf.txt
 	mv ${pair_id}.delly.vcf.gz ${pair_id}.delly.ori.vcf.gz
+	echo "perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz"
 	perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz
 	bgzip -f ${pair_id}.delly.vcf
 	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
@@ -120,7 +126,7 @@ then
 
     if [[ $filter == 1 ]]
     then
-	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion' | sort -u  > ${pair_id}.sgf.txt
+	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion|transcript_ablation' | sort -u  > ${pair_id}.sgf.txt
 	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
 	perl $baseDir/filter_svaba.pl -t $tid -p ${pair_id} -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
 	bgzip ${pair_id}.svaba.vcf
@@ -190,6 +196,7 @@ then
 elif [[ $method == 'itdseek' ]]
 then
     stexe=`which samtools`
+    echo $stexe
     samtools view -@ $NPROC -L ${itdbed} ${sbam} | itdseek.pl --refseq ${reffa} --samtools ${stexe} --bam ${sbam} | vcf-sort | bedtools intersect -header -b ${itdbed} -a stdin | java -Xmx30g -jar $SNPEFF_HOME/SnpSift.jar filter "( LEN < 10000 )" | bgzip > ${pair_id}.itdseek.vcf.gz
     
     tabix ${pair_id}.itdseek.vcf.gz

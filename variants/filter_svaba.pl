@@ -41,11 +41,11 @@ W1:while (my $line = <IN>) {
     $hash{$key} = $val unless ($hash{$key});
   }
   if (length($alt) > length($ref)) {
-      $hash{SVTYPE} = "INS";
-      $hash{END} = $pos;
+    $hash{SVTYPE} = "INS";
+    $hash{END} = $pos;
   }elsif (length($alt) < length($ref)) {
-      my $diff = substr($ref, length($alt));
-      $hash{SVTYPE} = "DEL";
+    my $diff = substr($ref, length($alt));
+    $hash{SVTYPE} = "DEL";
       $hash{END} = $pos + length($diff);
   }
   next unless ($hash{ANN});
@@ -92,7 +92,7 @@ W1:while (my $line = <IN>) {
     my ($allele,$effect,$impact,$gene,$geneid,$feature,
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
-    next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
+    next unless ($impact =~ m/HIGH|MODERATE|LOW/ || $effect =~ /splice/i);
     next if($effect eq 'sequence_feature');
     $keeptrx = $trx;
     $keepforvcf = $gene;
@@ -107,7 +107,6 @@ W1:while (my $line = <IN>) {
       push @nannot, $info;
     }
   }
-  
   my $newannot = join(";",@nannot);
   if ($hash{SVTYPE} eq 'INS' || ($hash{SVTYPE} eq 'DEL' && $keepforvcf !~ m/&/)) {
     if ($filter =~ m/LOWMAPQ|LowQual/i) {
@@ -231,9 +230,6 @@ close IN;
 
 
 foreach my $id (keys %svpairs) {
-  if ($id =~ m/815016443/) {
-      warn "debugging\n";
-  }
   my $alt1 = $svpairs{$id}{1}{alt};
   my $alt2 = $svpairs{$id}{2}{alt};
   my $svtype;
@@ -242,14 +238,14 @@ foreach my $id (keys %svpairs) {
   }elsif ($alt2 =~ m/^\w\[/ && $alt1 =~ m/^\]/) {
     $svtype = 'INS';
   }else {
-      $svtype = 'UNK';
+    $svtype = 'UNK';
   }
-   if ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/ && $svpairs{$id}{1}{span} < 9999)) {
-     if ($filter =~ m/LOWMAPQ|LowQual/i) {
+  if ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/ && $svpairs{$id}{1}{span} < 9999)) {
+    if ($filter =~ m/LOWMAPQ|LowQual/i) {
       $filter = 'FailedQC'.$filter;
-    }
+      }
     print VCFOUT $svpairs{$id}{1}{vcfline},"\n"
-   }elsif ($svtype eq 'DEL' && $svpairs{$id}{1}{span} && $svpairs{$id}{1}{span} > 9999) {
-     print DELFUS $svpairs{$id}{1}{fusionline},"\n";
-   }
+  }elsif ($svtype eq 'DEL' && $svpairs{$id}{1}{span} && $svpairs{$id}{1}{span} > 9999) {
+    print DELFUS $svpairs{$id}{1}{fusionline},"\n";
+  }
 }

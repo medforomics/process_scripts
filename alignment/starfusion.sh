@@ -43,10 +43,6 @@ if [[ -z $isdocker ]]
 then
     source /etc/profile.d/modules.sh
     module add python/2.7.x-anaconda star/2.5.2b bedtools/2.26.0
-fi
-
-if [[ -n $method ]] && [[ $method == 'trinity' ]]
-then
     module load trinity/1.6.0
     tmphome="/tmp/$USER"
     if [[ -z $tmphome ]]

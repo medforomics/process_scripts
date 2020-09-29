@@ -35,9 +35,11 @@ then
     NPROC=`nproc`
 fi
 
-source /etc/profile.d/modules.sh
-module load hisat-genotype/1.0.1
-
+if [[ -z $isdocker ]]
+then
+    source /etc/profile.d/modules.sh
+    module load hisat-genotype/1.0.1
+fi
 diff $fq1 $fq2 > difffile
 
 if [ -s difffile ]
