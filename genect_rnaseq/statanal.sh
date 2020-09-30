@@ -28,6 +28,7 @@ fi
 if [[ -z $isdocker ]]
 then
     source /etc/profile.d/modules.sh
+    module load R/3.2.1-intel
 fi
 perl $baseDir/concat_cts.pl -o ./ *.cts
 perl $baseDir/concat_fpkm.pl -o ./ *.fpkm.txt
@@ -40,7 +41,6 @@ then
     touch empty.png
     touch bg.rda
 else
-    module load R/3.2.1-intel
     Rscript  $baseDir/dea.R
     Rscript $baseDir/build_ballgown.R *_stringtie
     edgeR=`find ./ -name *.edgeR.txt`
