@@ -102,26 +102,36 @@ while (my $line = <IN>) {
     print CNSO join("\t",$hash{chromosome},$hash{start},$hash{end},
 		    $hash{log2},$hash{cn}),"\n";
     
-    next if ($hash{cn} == 2) || scalar(keys %genes) < 1;
+    next if ($hash{cn} == 2 && $hash{cn1} ne ''  && $hash{cn2} ne '' && $hash{cn1} > 0 && $hash{cn2} > 0) || scalar(keys %genes) < 1;
+    next if ($hash{cn} == 2 && $hash{cn1} eq ''  && $hash{cn2} eq '');
     my $abtype = 'amplification';
-    $abtype = 'loss' if ($hash{cn} < 2);
-    $abtype = 'gain' if ($hash{cn} > 2 && $hash{cn} < 6);
-    foreach $gene (keys %genes) {
-	my @cytoband;
-	if ($cyto{$key}{'p'}) {
-	  @nums = sort {$b <=> $a} @{$cyto{$key}{'p'}};
-	  push @cytoband, 'p'.$nums[0],'p'.$nums[-1];
-	} if ($cyto{$key}{'q'}) {
-	  @nums = sort {$a <=> $b} @{$cyto{$key}{'q'}};
-	  push @cytoband, 'q'.$nums[0],'q'.$nums[-1];
-	} 
-	if ($cytoband[0] eq $cytoband[-1]) {
-	  $cband = $cytoband[0];
-	}else {
-	  $cband = join("-",$cytoband[0],$cytoband[-1]);
+    if ($hash{cn} != 2) {
+      $abtype = 'loss' if ($hash{cn} < 2);
+      if ($hash{cn} > 2 && $hash{cn} < 6) {
+	$abtype = 'gain' ;
+	if ($hash{cn1} ne '' && $hash{cn2} ne '' && ($hash{cn1} == 0 || $hash{cn2} == 0)) {
+	  $abtype.= ' LOH';
 	}
-	print OUT join("\t",$gene,$hash{chromosome},$hash{start},$hash{end},
-			$abtype,$hash{cn},$hash{weight},$cband),"\n";
+      }
+    }else {
+      $abtype = 'cnLOH';
     }
-}
+    foreach $gene (keys %genes) {
+      my @cytoband;
+      if ($cyto{$key}{'p'}) {
+	@nums = sort {$b <=> $a} @{$cyto{$key}{'p'}};
+	push @cytoband, 'p'.$nums[0],'p'.$nums[-1];
+      } if ($cyto{$key}{'q'}) {
+	@nums = sort {$a <=> $b} @{$cyto{$key}{'q'}};
+	push @cytoband, 'q'.$nums[0],'q'.$nums[-1];
+      } 
+      if ($cytoband[0] eq $cytoband[-1]) {
+	$cband = $cytoband[0];
+      }else {
+	$cband = join("-",$cytoband[0],$cytoband[-1]);
+      }
+      print OUT join("\t",$gene,$hash{chromosome},$hash{start},$hash{end},
+		     $abtype,$hash{cn},$hash{weight},$cband),"\n";
+    }
+  }
 close IN;
