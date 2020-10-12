@@ -104,16 +104,22 @@ while (my $line = <IN>) {
     
     next if ($hash{cn} == 2 && $hash{cn1} ne ''  && $hash{cn2} ne '' && $hash{cn1} > 0 && $hash{cn2} > 0) || scalar(keys %genes) < 1;
     next if ($hash{cn} == 2 && $hash{cn1} eq ''  && $hash{cn2} eq '');
-    my $abtype = 'amplification';
-    if ($hash{cn} != 2) {
-      $abtype = 'loss' if ($hash{cn} < 2);
-      if ($hash{cn} > 2 && $hash{cn} < 6) {
-	$abtype = 'gain' ;
-	if ($hash{cn1} ne '' && $hash{cn2} ne '' && ($hash{cn1} == 0 || $hash{cn2} == 0)) {
-	  $abtype.= ' LOH';
-	}
+    my $abtype = 'cnLOH';
+    if ($hash{cn} < 2) {
+      if ($hash{cn} <  1 ) {
+	$abtype = 'homozygous deletion';
+      }else {
+	$abtype = 'hemizygous deletion';
       }
-    }else {
+    } elsif ($hash{cn} > 2) {
+      $abtype = 'gain' ;
+      if ($hash{cn} > 6) {
+	$abtype = 'amplification';
+      }
+      if ($hash{cn1} ne '' && $hash{cn2} ne '' && ($hash{cn1} == 0 || $hash{cn2} == 0)) {
+	$abtype.= ' LOH';
+      }
+    } else {
       $abtype = 'cnLOH';
     }
     foreach $gene (keys %genes) {
