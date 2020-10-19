@@ -102,8 +102,12 @@ while (my $line = <IN>) {
     print CNSO join("\t",$hash{chromosome},$hash{start},$hash{end},
 		    $hash{log2},$hash{cn}),"\n";
     
-    next if ($hash{cn} == 2 && $hash{cn1} ne ''  && $hash{cn2} ne '' && $hash{cn1} > 0 && $hash{cn2} > 0) || scalar(keys %genes) < 1;
-    next if ($hash{cn} == 2 && $hash{cn1} eq ''  && $hash{cn2} eq '');
+    if (exists $hash{cn1} && exists $hash{cn2}) {
+      next if (($hash{cn} == 2 && $hash{cn1} ne ''  && $hash{cn2} ne '' && $hash{cn1} > 0 && $hash{cn2} > 0) || scalar(keys %genes) < 1);
+      next if ($hash{cn} == 2 && $hash{cn1} eq ''  && $hash{cn2} eq '');
+    }else {
+      next if ($hash{cn} == 2 || scalar(keys %genes) < 1);
+    }
     my $abtype = 'cnLOH';
     if ($hash{cn} < 2) {
       if ($hash{cn} <  1 ) {
@@ -116,8 +120,10 @@ while (my $line = <IN>) {
       if ($hash{cn} > 6) {
 	$abtype = 'amplification';
       }
-      if ($hash{cn1} ne '' && $hash{cn2} ne '' && ($hash{cn1} == 0 || $hash{cn2} == 0)) {
-	$abtype.= ' LOH';
+      if (exists $hash{cn1} && exists $hash{cn2}) {
+	if ($hash{cn1} ne '' && $hash{cn2} ne '' && ($hash{cn1} == 0 || $hash{cn2} == 0)) {
+	  $abtype.= ' LOH';
+	}
       }
     } else {
       $abtype = 'cnLOH';
