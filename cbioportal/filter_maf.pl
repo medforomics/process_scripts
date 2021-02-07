@@ -10,7 +10,7 @@ my @maffiles = @ARGV;
 open MAFOUT, ">variants.maf" or die $!;
 my @mincols = ('Hugo_Symbol','Entrez_Gene_Id','Variant_Classification',
 	       'Tumor_Sample_Barcode','HGVSp_Short','Protein_position',
-	       'SWISSPROT');
+	       'SWISSPROT','t_alt_count','t_ref_count','n_alt_count','n_ref_count');
 #($hash{'Hugo_Symbol'},$hash{'Entrez_Gene_Id'},$hash{'Variant_Classification'},$hash{'Tumor_Sample_Barcode'},$hash{'HGVSp_Short'},$hash{'Protein_position'},$hash{'SWISSPROT'});
 
 foreach $maf (@maffiles) {

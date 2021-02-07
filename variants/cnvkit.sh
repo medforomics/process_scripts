@@ -43,8 +43,8 @@ then
 fi
 if [[ -z $paneldir ]]
 then
-    echo "missing panel dir"
-    usage
+    paneldir="UTSW_V4_pancancer"
+    echo "missing panel dir using UTSW_V4_pancancer"
 fi
 if [[ -s "${index_path}/genome.fa" ]]
 then
@@ -54,14 +54,13 @@ else
     echo "Missing Fasta File: ${index_path}/genome.fa"
     usage
 fi
-if [[ -z $paneldir ]] 
-then
-    paneldir="UTSW_V3_pancancer"
-fi
 
 capture="$paneldir/targetpanel.bed"
 targets="$paneldir/cnvkit."
 normals="$paneldir/pon.cnn"
+echo "${targets}targets.bed"
+echo "${targets}antitargets.bed"
+echo "${normals}"
 
 if [[ -z $isdocker ]]
 then
@@ -69,31 +68,12 @@ then
     module load cnvkit/0.9.5 bedtools/2.26.0 samtools/gcc/1.8 bcftools/gcc/1.8 java/oracle/jdk1.8.0_171 snpeff/4.3q
 fi
 
-if [[ -f "${paneldir}/pon.downsample.cnn" ]]
-then
-    bedtools coverage -sorted -g  ${index_path}/genomefile.txt -a ${capture} -b ${sbam} -hist > covhist.txt
-    grep ^all covhist.txt > genomecov.txt
-    sumdepth=`awk '{ sum+= $2*$3;} END {print sum;}' genomecov.txt`
-    total=`head -n 1 genomecov.txt |cut -f 4`
-    avgdepth=$((${sumdepth}/${total}))
-    if [[ "$avgdepth" -lt 1000 ]]
-    then
-	normals="${paneldir}/pon.downsample.cnn"
-    fi
-fi
-
-echo "${targets}targets.bed"
-echo "${targets}antitargets.bed"
-echo "${normals}"
-
-numsnps=`grep -c -P "rs[0-9]+" ${targets}targets.bed`
-panelsize=`awk '{ sum+=$3-$2} END {print sum}' ${targets}targets.bed`
-
 unset DISPLAY
-
 cnvkit.py coverage ${sbam} ${targets}targets.bed -o ${pair_id}.targetcoverage.cnn
 cnvkit.py coverage ${sbam} ${targets}antitargets.bed -o ${pair_id}.antitargetcoverage.cnn
 cnvkit.py fix ${pair_id}.targetcoverage.cnn ${pair_id}.antitargetcoverage.cnn ${normals} -o ${pair_id}.cnr
+
+panelsize=`awk '{ sum+=$3-$2} END {print sum}' ${targets}targets.bed`
 if [[ $panelsize -gt 4000000 ]]
 then
     cnvkit.py segment ${pair_id}.cnr -o ${pair_id}.cns
@@ -101,9 +81,9 @@ else
     cnvkit.py segment -m haar ${pair_id}.cnr -o ${pair_id}.cns
 fi
 
-if [[ $numsnps -gt 100 ]]
+if [[ -f "${paneldir}/commonsnps.bed" ]]
 then
-    bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -a INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR -T ${index_path}/IDT_snps.hg38.bed ${sbam} | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o common_variants.vcf
+    bcftools mpileup -A -d 1000000 -C50 -Ou --gvcf 0 -f ${reffa} -a INFO/AD,INFO/ADF,INFO/ADR,FORMAT/DP,FORMAT/SP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR -T ${paneldir}/commonsnps.bed ${sbam} | bcftools call -m --gvcf 0 -Ov | bcftools convert --gvcf2vcf -f ${reffa} -Ov -o common_variants.vcf
     $baseDir/formatVcfCNV.pl cnvkit_common common_variants.vcf
     echo -e "CHROM\tPOS\tAO\tRO\tDP\tMAF" > ${pair_id}.ballelefreq.txt
     java -jar $SNPEFF_HOME/SnpSift.jar extractFields cnvkit_common.vcf CHROM POS GEN[0].AO GEN[0].RO GEN[0].DP |grep -v CHROM | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$3/$5}' >>  ${pair_id}.ballelefreq.txt

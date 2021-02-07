@@ -1,16 +1,27 @@
 #!/usr/bin/perl -w
 #concat_cnvs.pl
 
-my @discreet = `ls *cnv_discreet.txt`;
+my @answercnv = @ARGV;
+
 my %cts;
 my %sample;
-foreach $file (@discreet) {
+foreach $file (@answercnv) {
     open IN, "<$file" or die $!;
-    my ($sample,@ext) = split(/\./,$file);
+    my $fname = (split(/\//,$file))[-1];
+    my ($sample,@ext) = split(/\./,$fname);
     $sample{$sample} = 1;
+    my $header = <IN>;
+    chomp($header);
+    my @cols = split(/\t/, $header);
     while (my $line = <IN>) {
 	chomp($line);
-	my ($chr,$s,$e,$ct,$gene) = split(/\t/,$line);
+	my %hash;
+	my @row = split(/\t/,$line);
+	foreach my $i (0..$#row) {
+	    $hash{$cols[$i]} = $row[$i];
+	}
+	$ct = $hash{CN};
+	
 	my $discreet = 0;
 	if ($ct == 1) {
 	    $discreet = -1;
@@ -23,42 +34,25 @@ foreach $file (@discreet) {
 	}elsif ($ct eq 'NA') {
 	    $ct = '';
 	}
-	$cts{$gene}{$sample} = $discreet;
+	$gene=$hash{Gene};
+	$discreet{$gene}{$sample} = $discreet;
+	$cn{$gene}{$sample} = $hash{CN};
     }
 }
 my @samples = sort {$a cmp $b} keys %sample;
-open OUT, ">discreet.cna.txt" or die $!;
-print OUT join("\t",'Hugo_Symbol',@samples),"\n";
-foreach my $gene (keys %cts) {
-    my @line;
+open DIS, ">discreet.cna.txt" or die $!;
+open CN, ">copynumber.cna.txt" or die $!;
+print DIS join("\t",'Hugo_Symbol',@samples),"\n";
+print CN join("\t",'Hugo_Symbol',@samples),"\n";
+foreach my $gene (keys %discreet) {
+    my @line1;
+    my @line2;
     foreach my $sid (@samples) {
-	$cts{$gene}{$sid} = 0 unless (exists $cts{$gene}{$sid});
-	push @line, $cts{$gene}{$sid};
+	$discreet{$gene}{$sid} = 0 unless (exists $discreet{$gene}{$sid});
+	$cn{$gene}{$sid} = 2 unless (exists $cn{$gene}{$sid});
+	push @line1, $discreet{$gene}{$sid};
+	push @line2, $cn{$gene}{$sid};
     }
-    print OUT join("\t",$gene,@line),"\n";
-}
-
-my @continuous = `ls *cnv_continuous.txt`;
-my %cts;
-my %sample;
-foreach $file (@continuous) {
-    open IN, "<$file" or die $!;
-    my ($sample,@ext) = split(/\./,$file);
-    $sample{$sample} = 1;
-    while (my $line = <IN>) {
-	chomp($line);
-	my ($chr,$s,$e,$ct,$gene) = split(/\t/,$line);
-	$cts{$gene}{$sample} = $ct;
-    }
-}
-my @samples = sort {$a cmp $b} keys %sample;
-open OUT, ">continuous.cna.txt" or die $!;
-print OUT join("\t",'Hugo_Symbol',@samples),"\n";
-foreach my $gene (keys %cts) {
-    my @line;
-    foreach my $sid (@samples) {
-	$cts{$gene}{$sid} = 2 unless ($cts{$gene}{$sid});
-	push @line, $cts{$gene}{$sid};
-    }
-    print OUT join("\t",$gene,@line),"\n";
+    print DIS join("\t",$gene,@line1),"\n";
+    print CN join("\t",$gene,@line2),"\n";
 }
