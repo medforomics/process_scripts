@@ -6,10 +6,20 @@ my %opt = ();
 my $results = GetOptions (\%opt,'input|s=s','help|h','datadir|r=s',
 			  'prefix|p=s');
 
+
+my %keep;
 open OM, "<$opt{datadir}/cancer.genelist.txt" or die $!;
 while (my $line = <OM>) {
     chomp($line);
     $keep{$line} = 1;
+}
+
+my %trxkeep;
+open TRX, "<$opt{datadir}/primary_transcripts.txt" or die $!;
+while (my $line = <TRX>) {
+    chomp($line);
+    my ($sym,$gene,$trxid,@other) = split(/\t/,$line);
+    $trxkeep{$trxid} = 1;
 }
 
 my $file = $opt{input};
@@ -47,22 +57,25 @@ while (my $line = <IN>) {
     my $key = join("-",$chrom,$start,$end);
     $skip{$key}{readct} = $readct;
     $skip{$key}{gene} = $sym;
+    next unless ($trxkeep{$trxid});
     push @{$skip{$key}{trxid}{$trxid}}, $exonnum
 }
 
 open OUT, ">$opt{prefix}.exonskip.answer.txt" or die $!;
-print OUT join("\t","Gene","Chromosome","Start","End","Abberation Type","Readct","Transcripts"),"\n";
+print OUT join("\t","Sample","Gene","Chromosome","Start","End","Abberation Type","Readct","Transcript"),"\n";
 
 foreach my $loci (keys %skip) {
-    my @trxs;
-    foreach my $trxid (keys %{$skip{$loci}{trxid}}) {
-	my @exonnums = sort {$a <=> $b} @{$skip{$loci}{trxid}{$trxid}};
-	if (scalar(@exonnums) > 1) {
-	    push @trxs, $trxid.':'.$exonnums[0].'-'.$exonnums[-1];
-	}else {
-	    push @trxs, $trxid.':'.$exonnums[0];
-	}
+  my @trxs;
+  foreach my $trxid (keys %{$skip{$loci}{trxid}}) {
+    my @exonnums = sort {$a <=> $b} @{$skip{$loci}{trxid}{$trxid}};
+    my $trxname;
+    if (scalar(@exonnums) > 1) {
+      $trxname = $trxid.':'.$exonnums[0].'-'.$exonnums[-1];
+    }else {
+      $trxname = $trxid.':'.$exonnums[0];
     }
-    print OUT join("\t",$skip{$loci}{gene},split(/-/,$loci),'Exon Skipping',
-		   $skip{$loci}{readct},join("|",@trxs)),"\n";
+    #push @trxs, $trxname 
+    print OUT join("\t",$opt{prefix},$skip{$loci}{gene},split(/-/,$loci),'Exon Skipping',
+		       $skip{$loci}{readct},$trxname),"\n";
+  }
 }

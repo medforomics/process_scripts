@@ -48,9 +48,11 @@ if [[ -z $isdocker ]]
 then
     source /etc/profile.d/modules.sh
     export PATH=/project/shared/bicf_workflow_ref/seqprg/bin:$PATH
+    module load samtools/gcc/1.10
 fi
 baseDir="`dirname \"$0\"`"
 
+samtools index -@ $NPROC ${sbam}
 regtools junctions extract -o ${pair_id}.junc -s ${stranded} ${sbam}
 regtools junctions annotate -o ${pair_id}.annot.bed ${pair_id}.junc ${index_path}/genome.fa ${index_path}/gencode.gtf
 perl ${baseDir}/filter_exonskipping.pl -p $pair_id -r ${index_path} -s ${pair_id}.annot.bed
