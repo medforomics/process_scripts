@@ -73,34 +73,18 @@ do
     numfq=$((numfq + 1))
 done
 
-hisat_opt=''
+
+star_opt=$fqs
 fqarray=($fqs)
 
-if [[ $numfq == 2 ]]
-then
-    hisat_opt="-1 ${fqarray[0]} -2 ${fqarray[1]}"
-else
-    hisat_opt="-U ${fqarray[0]}"
-fi
 
 if [[ -z $isdocker ]]
 then
-    module load hisat2/2.1.0-intel
+    module load star/2.7.3a
 fi
 
-idx="${index_path}/genome"
-if [[ -d ${index_path}/hisat_index ]]
-then
-    idx ="${index_path}/hisat_index/genome"
-fi
+STAR --genomeDir ${index_path}/star_index/ --readFilesIn $star_opt --readFilesCommand zcat --genomeLoad NoSharedMemory --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outSAMheaderCommentFile COfile.txt --outSAMheaderHD @HD VN:1.4 SO:coordinate --outSAMunmapped Within --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --quantMode TranscriptomeSAM --sjdbScore 1 --limitBAMsortRAM 60000000000 --outFileNamePrefix out
 
-hisat2 -p $NPROC --rg-id ${pair_id} --rg LB:tx --rg PL:illumina --rg PU:barcode --rg SM:${pair_id} --dta -x ${idx} $hisat_opt -S out.sam --summary-file ${pair_id}.alignerout.txt
-
-if [[ $umi == 1 ]]
-then
-    python ${baseDir}/add_umi_sam.py -s out.sam -o output.bam
-else
-    samtools view -1 --threads $NPROC -o output.bam out.sam
-fi
-samtools sort -@ $NPROC -O BAM -o ${pair_id}.bam output.bam
+mv outLog.final.out ${pair_id}.alignerout.txt
+mv outAligned.sortedByCoord.out.bam ${pair_id}.bam
 samtools index -@ $NPROC ${pair_id}.bam

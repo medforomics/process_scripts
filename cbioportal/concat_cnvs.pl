@@ -20,6 +20,7 @@ foreach $file (@answercnv) {
 	foreach my $i (0..$#row) {
 	    $hash{$cols[$i]} = $row[$i];
 	}
+	next if ($hash{Chromosome} =~ m/X|Y/);
 	$ct = $hash{CN};
 	
 	my $discreet = 0;
