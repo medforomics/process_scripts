@@ -82,7 +82,7 @@ then
     gzip ${pair_id}.consensus.R1.fastq
     gzip ${pair_id}.consensus.R2.fastq
     bwa mem -M -C -t $NPROC -R "@RG\tID:${pair_id}\tLB:tx\tPL:illumina\tPU:barcode\tSM:${pair_id}" ${index_path}/genome.fa ${pair_id}.consensus.R1.fastq.gz ${pair_id}.consensus.R2.fastq.gz > out.sam
-    if [[ ${index_path}/genome.fa.alt ]]
+    if [[ -f ${index_path}/genome.fa.alt ]]
     then
 	k8 ${testexe}/bwa-postalt.js -p tmphla ${index_path}/genome.fa.alt out.sam | samtools view -1 - > ${pair_id}.consensus.bam
     else

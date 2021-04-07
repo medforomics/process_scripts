@@ -84,8 +84,8 @@ W1:while (my $line = <IN>) {
   @tumoraltct = split(/,/,$gtinfo{$opt{tumor}}{AO});
   next if ($tumoraltct[0] eq '.');
   $hash{AF} = join(",",@tumormaf);
-  next if ($tumoraltct[0] < 20);
-  next if ($tumormaf[0] < 0.01);
+  next if ($tumoraltct[0] < 5);
+  #next if ($tumormaf[0] < 0.01);
   my $keepforvcf = 0;
   my $keeptrx;
  F1:foreach $trx (split(/,/,$hash{ANN})) {
@@ -93,7 +93,7 @@ W1:while (my $line = <IN>) {
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
     next unless ($impact =~ m/HIGH|MODERATE|LOW/ || $effect =~ /splice/i);
-    next if($effect eq 'sequence_feature');
+    #next if($effect eq 'sequence_feature');
     $keeptrx = $trx;
     $keepforvcf = $gene;
     last F1;
@@ -193,8 +193,8 @@ W1:while (my $line = <IN>) {
   @tumoraltct = split(/,/,$gtinfo{$opt{tumor}}{AO});
   next if ($tumoraltct[0] eq '.');
   $hash{AF} = join(",",@tumormaf);
-  next if ($tumoraltct[0] < 20);
-  next if ($tumormaf[0] < 0.01);
+  next if ($tumoraltct[0] < 5);
+  #next if ($tumormaf[0] < 0.01);
   my $keepforvcf = 0;
   my $keeptrx;
  F1:foreach $trx (split(/,/,$hash{ANN})) {
@@ -202,7 +202,7 @@ W1:while (my $line = <IN>) {
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
     next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
-    next if($effect eq 'sequence_feature');
+    #next if($effect eq 'sequence_feature');
     $keeptrx = $trx;
     $keepforvcf = $gene;
     last F1;
@@ -223,13 +223,16 @@ W1:while (my $line = <IN>) {
       $featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
       $cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$keeptrx);
   my $fusionline = join("\t",$chrom,$pos,$hash{CHR2},$hash{END},$effect,$gene,$biotype,$filter,$format,@gts);
-  $svpairs{$svid}{$svpair} = {vcfline=>$line,fusionline=>$fusionline,
+  $svpairs{$svid}{$svpair} = {vcfline=>$line,fusionline=>$fusionline,filter=>$filter,
 			      gene=>$keepforvcf,alt=>$alt,span=>$hash{SPAN}};
 }
 close IN;
 
 
 foreach my $id (keys %svpairs) {
+  if ($id == 99327034) {
+      warn "Debugging\n";
+  }
   my $alt1 = $svpairs{$id}{1}{alt};
   my $alt2 = $svpairs{$id}{2}{alt};
   my $svtype;
@@ -240,12 +243,14 @@ foreach my $id (keys %svpairs) {
   }else {
     $svtype = 'UNK';
   }
-  if ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/ && $svpairs{$id}{1}{span} < 9999)) {
-    if ($filter =~ m/LOWMAPQ|LowQual/i) {
-      $filter = 'FailedQC'.$filter;
+  if (($svtype eq 'DEL' && $svpairs{$id}{1}{span} && $svpairs{$id}{1}{span} > 9999) ||($svpairs{$id}{1}{fusionline} =~ m/fusion/)) {
+      print DELFUS $svpairs{$id}{1}{fusionline},"\n";
+  } elsif ($svtype eq 'INS' || ($svtype eq 'DEL' && $svpairs{$id}{1}{gene} !~ m/&/ && $svpairs{$id}{1}{span} < 9999)) {
+      if ($svpairs{$id}{1}{filter} =~ m/LOWMAPQ|LowQual/i) {
+	  my @vline = split(/\t/,$svpairs{$id}{1}{vcfline});
+	  $vline[6] = 'FailedQC'.$vline[6];
+	  $svpairs{$id}{1}{vcfline} = join("\t",@vline);
       }
-    print VCFOUT $svpairs{$id}{1}{vcfline},"\n"
-  }elsif ($svtype eq 'DEL' && $svpairs{$id}{1}{span} && $svpairs{$id}{1}{span} > 9999) {
-    print DELFUS $svpairs{$id}{1}{fusionline},"\n";
+      print VCFOUT $svpairs{$id}{1}{vcfline},"\n"
   }
 }

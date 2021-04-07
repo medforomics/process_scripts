@@ -30,7 +30,7 @@ W1:while (my $line = <IN>) {
       unless ($opt{normal}) {
 	if (grep(/N_DNA/,@gtheader)) {
 	  my @tsamps = grep(/N_DNA/,@gtheader);
-	  $opt{tumor} = $tsamps[0];
+	  $opt{normal} = $tsamps[0];
 	}
       }
     }
@@ -82,8 +82,8 @@ W1:while (my $line = <IN>) {
   @tumoraltct = split(/,/,$gtinfo{$opt{tumor}}{AO});
   next if ($tumoraltct[0] eq '.');
   $hash{AF} = join(",",@tumormaf);
-  next if ($tumoraltct[0] < 20);
-  next if ($tumormaf[0] < 0.01);
+  next if ($tumoraltct[0] < 5);
+  #next if ($tumormaf[0] < 0.01);
   my $keepforvcf = 0;
   my $keeptrx;
  F1:foreach $trx (split(/,/,$hash{ANN})) {
@@ -91,7 +91,7 @@ W1:while (my $line = <IN>) {
 	$featureid,$biotype,$rank,$codon,$aa,$pos_dna,$len_cdna,
 	$cds_pos,$cds_len,$aapos,$aalen,$distance,$err) = split(/\|/,$trx);
     next unless ($impact =~ m/HIGH|MODERATE/ || $effect =~ /splice/i);
-    next if($effect eq 'sequence_feature');
+    #next if($effect eq 'sequence_feature');
     $keeptrx = $trx;
     $keepforvcf = $gene;
     last F1;
@@ -109,7 +109,7 @@ W1:while (my $line = <IN>) {
   if ($filter ne 'PASS') {
     $filter = 'FailedQC;'.$filter;
   }
-  if ($hash{SVTYPE} eq 'INS' || ($hash{SVTYPE} eq 'DEL' && $keepforvcf !~ m/&/)) {
+  if ($hash{SVTYPE} eq 'DUP' || $hash{SVTYPE} eq 'INS' || ($hash{SVTYPE} eq 'DEL' && $keepforvcf !~ m/&/)) {
     print VCFOUT join("\t",$chrom,$pos,$id,$ref,$alt,$score,$filter,$newannot,
 		      $format,@gts),"\n";
   }elsif ($hash{END} && $hash{END} - $pos > 9999) {

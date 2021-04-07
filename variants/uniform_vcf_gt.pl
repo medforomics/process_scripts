@@ -6,6 +6,7 @@ my $vcf = shift @ARGV;
 my $outfile = $pair_id.".uniform.vcf";
 open OUT, ">$outfile" or die $!;
 open VCF, "gunzip -c $vcf|" or die $!;
+my @headerline;
 while (my $line = <VCF>) {
     chomp($line);
     if ($line =~ m/#/) {
@@ -15,7 +16,10 @@ while (my $line = <VCF>) {
 	    print OUT "##FORMAT=<ID=RO,Number=1,Type=Integer,Description=\"Reference allele observation count\">\n";
 	    print OUT "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed\">\n";
 	    print OUT "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Approximate read depth (reads with MQ=255 or with bad mates are filtered)\">\n";
-	    my ($c, $p,$i,$r,$a,$s,$f,$an,$fo,@snames) = split(/\t/, $line);
+	    print OUT "##INFO=<ID=CHR2,Number=1,Type=String,Description=\"Chromosome for END coordinate in case of a translocation\">\n";
+	    print OUT "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the structural variant\">\n";
+	    @headerline = split(/\t/, $line);
+	    my ($c, $p,$i,$r,$a,$s,$f,$an,$fo,@snames) = @headerline;
 	    foreach my $j (0..$#snames) {
 		$snames[$j] =~ s/\[|\]|\.consensus|\.final//g;
 	    }
@@ -25,30 +29,40 @@ while (my $line = <VCF>) {
 	}
 	next;
     }
-    my ($chrom, $pos,$id,$ref,$alt,$score,
-	$filter,$annot,$format,@gts) = split(/\t/, $line);
+    my @line = split(/\t/, $line);
+    my $numfields = scalar(@line);
+    my ($chrom, $pos,$id,$ref,$alt,$score,$filter,$annot,$format) = @line[0..8];
+    if ($numfields != scalar(@headerline)) {
+      my @snames = @headerline[9..$#headerline];
+      my $numsamples = scalar(@snames);
+      my $idx = $numfields-$numsamples;
+      @gts = @line[$idx..$#line];
+    } else {
+      @gts = @line[9..$#line];
+    }
     my %hash = ();
     foreach $a (split(/;/,$annot)) {
-	my ($key,$val) = split(/=/,$a);
-	$hash{$key} = $val;
+      my ($key,$val) = split(/=/,$a);
+      $hash{$key} = $val;
     }
     if ($alt =~ m/chr(\w+):(\d+)/i) {
-	$chr2='chr'.$1;
-	$p2 = $2;
-	$hash{CHR2} = $chr2;
-	$hash{'END'} = $p2;
-	$annot .= ";CHR2=$chr2;END=$p2";
+      $chr2='chr'.$1;
+      $p2 = $2;
+      $hash{CHR2} = $chr2;
+      $hash{'END'} = $p2;
+      $annot .= ";CHR2=$chr2;END=$p2";
     }elsif ($alt =~ m/CHR(\w+):(\d+)/i) {
-	$chr2='chr'.$1;
-	$p2 = $2;
-	$hash{CHR2} = 'chr'.$1;
-	$hash{END} = $2;
-	$annot .= ";CHR2=$chr2;END=$p2";
+      $chr2='chr'.$1;
+      $p2 = $2;
+      $hash{CHR2} = 'chr'.$1;
+      $hash{END} = $2;
+      $annot .= ";CHR2=$chr2;END=$p2";
     }
     my @deschead = split(/:/,$format);
     my $newformat = 'GT:DP:AD:AO:RO';
     my @newgts = ();
     my $missingGT = 0;
+    #next if (scalar(@gts) != scalar(@snames));
   FG:foreach my $allele_info (@gts) {
       my @gtinfo = split(/:/,$allele_info);
       my %gtdata;

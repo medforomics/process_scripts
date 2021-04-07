@@ -102,5 +102,6 @@ then
 else
     samtools view -1 --threads $NPROC -o output.bam out.sam
 fi
-samtools sort -@ $NPROC -O BAM -o ${pair_id}.bam output.bam
+samtools sort -n -@ $NPROC -O BAM -o output.dups.bam output.bam
+java -Djava.io.tmpdir=./ -Xmx4g  -jar $PICARD/picard.jar FixMateInformation ASSUME_SORTED=TRUE SORT_ORDER=coordinate ADD_MATE_CIGAR=TRUE I=output.dups.bam O=${pair_id}.bam
 samtools index -@ $NPROC ${pair_id}.bam
