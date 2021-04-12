@@ -104,7 +104,7 @@ then
 	fi
     fi
     mkdir manta     
-    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} $opt --runDir manta
+    configManta.py --normalBam ${normal} --tumorBam ${tumor} --referenceFasta ${reffa} --runDir manta
     manta/runWorkflow.py -m local -j 8
     mantaopt=''
     if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]

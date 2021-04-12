@@ -157,6 +157,7 @@ W1:while (my $line = <IN>) {
     $hash{CHR2} = 'chr'.$1;
     $hash{END} = $2;
   }
+
   next unless ($hash{ANN});
   next unless ($hash{ANN} =~ m/HIGH|MODERATE|LOW/);
   my %gtinfo = ();
@@ -230,9 +231,6 @@ close IN;
 
 
 foreach my $id (keys %svpairs) {
-  if ($id == 99327034) {
-      warn "Debugging\n";
-  }
   my $alt1 = $svpairs{$id}{1}{alt};
   my $alt2 = $svpairs{$id}{2}{alt};
   my $svtype;

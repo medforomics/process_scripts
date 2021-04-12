@@ -185,7 +185,7 @@ then
     for i in *.bam; do
 	gvcflist="$gvcflist --bam ${i}"
     done
-    configManta.py $gvcflist $opt --referenceFasta ${reffa} $mode --runDir manta
+    configManta.py $gvcflist --referenceFasta ${reffa} $mode --runDir manta
     manta/runWorkflow.py -m local -j $NPROC
     if [[ -f manta/results/variants/candidateSmallIndels.vcf.gz ]]
     then

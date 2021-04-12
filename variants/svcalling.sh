@@ -103,18 +103,27 @@ then
 	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
 	cat ${pair_id}.delly.potentialfusion.txt  ${pair_id}.dgf.txt |sort -u >> ${pair_id}.delly.genefusion.txt
     fi
+elif [[ $method == 'manta' ]]
+then
+    gvcflist=''
+    for i in *.bam
+    do
+	gvcflist="$gvcflist --bam ${i}"
+    done
+    mkdir manta
+    configManta.py $gvcflist --referenceFasta {$reffa} --exome --runDir manta
+    manta/runWorkflow.py -m local -j $NPROC
+    java -jar $SNPEFF_HOME/SnpSift.jar filter "(BND_PAIR_COUNT >= 20)" manta/results/variants/candidateSV.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - > manta.annot.vcf
+    cat manta.annot.vcf | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl | java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT BND_PAIR_COUNT |grep -E 'gene_fusion|feature_fusion|transcript_ablation' | sort -u > ORD4474.mgf.txt
+    
 elif [[ $method == 'svaba' ]]
 then
-    if [[ -n ${normal} ]]
-    then
-	svaba run -p $NPROC -G ${reffa} -t ${sbam} -n ${normal} -a ${pair_id}
-    else
-	bamlist=''
-	for i in *.bam; do
-	    bamlist="$bamlist -t ${i}"
-	done
-	svaba run -p $NPROC -G ${reffa} -a ${pair_id} $bamlist
-    fi
+    bamlist=''
+    for i in *.bam; do
+	bamlist="$bamlist -t ${i}"
+    done
+    svaba run -p $NPROC -G ${reffa} -a ${pair_id} $bamlist
+
     #Create SV FILE
     vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.svaba.unfiltered.sv.vcf.gz
     bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v ${pair_id}.svaba.unfiltered.sv.vcf.gz -s 
