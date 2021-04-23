@@ -3,8 +3,7 @@
 
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
-my $results = GetOptions (\%opt,'input|s=s','help|h','datadir|r=s',
-			  'prefix|p=s');
+my $results = GetOptions (\%opt,'skip|s=s','help|h','datadir|r=s','known|k=s','prefix|p=s');
 
 
 my %keep;
@@ -22,49 +21,48 @@ while (my $line = <TRX>) {
     $trxkeep{$trxid} = 1;
 }
 
-my $file = $opt{input};
-
-open OUT, ">$opt{prefix}.exonskip.bed" or die $!;
-
-open IN, "<$file" or die $!;
-my $header = <IN>;
-chomp($header);
-my @colnames = split(/\t/,$header);
-
-while (my $line = <IN>) {
-    chomp($line);
-    my @row = split(/\t/,$line);
-    my %hash;
-    foreach my $i (0..$#row) {
-	$hash{$colnames[$i]} = $row[$i];
-    }
-    next if ($hash{known_junction} || $hash{exons_skipped} < 1);
-    next unless ($keep{$hash{genes}});
-    next if ($hash{score} < 9);
-    print OUT join("\t",$hash{chrom},$hash{start},$hash{end},$hash{score}),"\n";
+my %knownjunc;
+open KNOWN, "<$opt{known}" or die $!;
+while (my $line = <KNOWN>) {
+  chomp($line);
+  my ($chrom,$start,$end,$skipinfo,$chr,$a,$b,$knowninfo,$len) = split(/\t/,$line);    
+  my ($stand,$readcount,$known_junction,$exons_skipped) = split(/:/,$knowninfo);
+  my $key = join("-",$chrom,$start,$end);
+  push @{$knownjunc{$key}}, [$chr,$a,$b,$readcount];
 }
-close IN;
-close OUT;
-system(qq{bedtools intersect -wao -a $opt{prefix}.exonskip.bed -b $opt{datadir}/gencode.exon.bed > $opt{prefix}.exonskip.genes.txt});
 
 my %skip;
-open IN, "<$opt{prefix}.exonskip.genes.txt" or die $!;
+open IN, "<$opt{skip}" or die $!;
 while (my $line = <IN>) {
-    chomp($line);
-    my ($chrom,$start,$end,$readct,$chr,$a,$b,$gene,$len) = split(/\t/,$line);
-    next if ($chr eq '.');
-    my ($sym,$trxid,$exonnum,$strand) = split(/\|/,$gene);
+  chomp($line);
+  my ($chrom,$start,$end,$info,$chr,$a,$b,$gene,$len) = split(/\t/,$line);
+  next if ($chr eq '.');
+  my ($gname,$readcount,$known_junction,$exons_skipped) = split(/:/,$info);
+  my ($sym,$trxid,$exonnum,$strand) = split(/\|/,$gene);
+  if ($keep{$sym} && $trxkeep{$trxid}) {
     my $key = join("-",$chrom,$start,$end);
-    $skip{$key}{readct} = $readct;
-    $skip{$key}{gene} = $sym;
-    next unless ($trxkeep{$trxid});
+    $skip{$key}{strand} = $strand;
+    $skip{$key}{readct} = $readcount;
+    $skip{$key}{gene} = $sym;	
     push @{$skip{$key}{trxid}{$trxid}}, $exonnum
+  }
 }
 
 open OUT, ">$opt{prefix}.exonskip.answer.txt" or die $!;
-print OUT join("\t","Sample","Gene","Chromosome","Start","End","Abberation Type","Readct","Transcript"),"\n";
+print OUT join("\t","Sample","Gene","Chromosome","Start","End","Abberation Type","ExonSkipReadct","KnownJunctionReadCt","FractionSkippedFirstJunction","Transcript"),"\n";
 
 foreach my $loci (keys %skip) {
+  my $strand = $skip{$loci}{strand};
+  my @knownjuncs = @{$knownjunc{$loci}};
+  if ($strand eq '+') {
+    @knownjuncs = sort {$a->[1] <=> $b->[1]} @knownjuncs;
+  }else {    
+    @knownjuncs = sort {$b->[2] <=> $a->[2]} @knownjuncs;
+  }
+  $wtct = $knownjuncs[0][3];
+  unless ($wtct) {
+    $wtct = 0;
+  }
   my @trxs;
   foreach my $trxid (keys %{$skip{$loci}{trxid}}) {
     my @exonnums = sort {$a <=> $b} @{$skip{$loci}{trxid}{$trxid}};
@@ -74,8 +72,9 @@ foreach my $loci (keys %skip) {
     }else {
       $trxname = $trxid.':'.$exonnums[0];
     }
-    #push @trxs, $trxname 
     print OUT join("\t",$opt{prefix},$skip{$loci}{gene},split(/-/,$loci),'Exon Skipping',
-		       $skip{$loci}{readct},$trxname),"\n";
+		   $skip{$loci}{readct},$wtct,
+		   sprintf("%.4f",$skip{$loci}{readct}/($wtct+$skip{$loci}{readct})),
+		   $trxname),"\n";
   }
 }

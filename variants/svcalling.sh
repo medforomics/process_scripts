@@ -80,74 +80,45 @@ for i in *.bam; do
 	tid=$sid
     fi
 done
+bamlist=''
+for i in *.bam; do
+    bamlist="$bamlist -t ${i}"
+done
 
 #RUN DELLY
-if [[ $method == 'delly' ]]
-then
-    delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${bams} 
-    delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${bams}
-    delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${bams}
-    delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${bams}
-    delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${bams}
-    #MERGE DELLY AND MAKE BED
-    bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.delly.svar.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.delly.sv -v ${pair_id}.delly.svar.vcf.gz -s
-    java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 )" ${pair_id}.delly.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.delly.vcf.gz
-    if [[ $filter == 1 ]]
-    then
-	zcat ${pair_id}.delly.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS CHR2 END ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion|transcript_ablation' | sort -u > ${pair_id}.dgf.txt
-	mv ${pair_id}.delly.vcf.gz ${pair_id}.delly.ori.vcf.gz
-	echo "perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz"
-	perl $baseDir/filter_delly.pl -t $tid -p $pair_id -i ${pair_id}.delly.ori.vcf.gz
-	bgzip -f ${pair_id}.delly.vcf
-	zgrep '#CHROM' ${pair_id}.delly.vcf.gz > ${pair_id}.delly.genefusion.txt
-	cat ${pair_id}.delly.potentialfusion.txt  ${pair_id}.dgf.txt |sort -u >> ${pair_id}.delly.genefusion.txt
-    fi    
-elif [[ $method == 'svaba' ]]
-then
-    bamlist=''
-    for i in *.bam; do
-	bamlist="$bamlist -t ${i}"
-    done
-    svaba run -p $NPROC -G ${reffa} -a ${pair_id} $bamlist
 
-    #Create SV FILE
-    vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.svaba.unfiltered.sv.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.sv -v ${pair_id}.svaba.unfiltered.sv.vcf.gz -s 
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.sv.norm.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter "( FILTER = 'PASS' ) | GEN[*].AO > 20" | bgzip > ${pair_id}.svaba.sv.vcf.gz
-
-    vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort | java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" - |bgzip > ${pair_id}.svaba.indel.vcf.gz
-    bash $baseDir/norm_annot.sh -r ${index_path} -p svaba.indel -v ${pair_id}.svaba.indel.vcf.gz
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} svaba.indel.norm.vcf.gz | bgzip > ${pair_id}.svaba.vcf.gz
-
-    if [[ $filter == 1 ]]
-    then
-	zcat ${pair_id}.svaba.sv.vcf.gz | $SNPEFF_HOME/scripts/vcfEffOnePerLine.pl |java -jar $SNPEFF_HOME/SnpSift.jar extractFields - CHROM POS ALT ID ANN[*].EFFECT ANN[*].GENE ANN[*].BIOTYPE FILTER FORMAT GEN[*] |grep -E 'gene_fusion|feature_fusion|transcript_ablation' | sort -u  > ${pair_id}.sgf.txt
-	mv ${pair_id}.svaba.vcf.gz ${pair_id}.svaba.ori.vcf.gz
-	perl $baseDir/filter_svaba.pl -t $tid -p ${pair_id} -i ${pair_id}.svaba.ori.vcf.gz -s ${pair_id}.svaba.sv.vcf.gz
-	bgzip ${pair_id}.svaba.vcf
-	zgrep '#CHROM' ${pair_id}.svaba.sv.vcf.gz > ${pair_id}.svaba.genefusion.txt
-	cat ${pair_id}.svaba.potentialfusion.txt ${pair_id}.sgf.txt | sort -u >> ${pair_id}.svaba.genefusion.txt
-       fi
-elif [[ $method == 'lumpy' ]]
+if  [[ $method == 'delly' ]] || [[ $method == 'svaba' ]] || [[ $method == 'gridss' ]]
 then
-    #MAKE FILES FOR LUMPY
-    samtools sort -@ $NPROC -n -o namesort.bam ${sbam}
-    samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
-    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o splitters.bam -
-    gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o discordants.bam -
-    #RUN LUMPY
-    if [[ -n ${normal} ]]
+    if [[ $method == 'delly' ]]
     then
-	samtools sort -@ $NPROC -n -o namesort.bam ${normal}
-	samtools view -h namesort.bam | samblaster -M -a --excludeDups --addMateTags --maxSplitCount 2 --minNonOverlap 20 -d discordants.sam -s splitters.sam > temp.sam
-	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" splitters.sam | samtools  view -S -b - | samtools sort -o normal.splitters.bam -
-	gawk '{ if ($0~"^@") { print; next } else { $10="*"; $11="*"; print } }' OFS="\t" discordants.sam | samtools  view -S  -b - | samtools sort -o normal.discordants.bam -
-	speedseq sv -t $NPROC -o lumpy -R ${reffa} -B ${normal},${sbam} -D normal.discordants.bam,discordants.bam -S normal.splitters.bam,splitters.bam -x ${index_path}/exclude_alt.bed
-    else
-	speedseq sv -t $NPROC -o lumpy -R ${reffa} -B ${sbam} -D discordants.bam -S splitters.bam -x ${index_path}/exclude_alt.bed   
+	delly2 call -t BND -o ${pair_id}.delly_translocations.bcf -q 30 -g ${reffa} ${bams} 
+	delly2 call -t DUP -o ${pair_id}.delly_duplications.bcf -q 30 -g ${reffa} ${bams}
+	delly2 call -t INV -o ${pair_id}.delly_inversions.bcf -q 30 -g ${reffa} ${bams}
+	delly2 call -t DEL -o ${pair_id}.delly_deletion.bcf -q 30 -g ${reffa} ${bams}
+	delly2 call -t INS -o ${pair_id}.delly_insertion.bcf -q 30 -g ${reffa} ${bams}
+	#MERGE DELLY AND MAKE BED
+	bcftools concat -a -O v ${pair_id}.delly_duplications.bcf ${pair_id}.delly_inversions.bcf ${pair_id}.delly_translocations.bcf ${pair_id}.delly_deletion.bcf ${pair_id}.delly_insertion.bcf | vcf-sort -t temp | bgzip > ${pair_id}.${method}.svar.vcf.gz
+    elif [[ $method == 'svaba' ]]
+    then
+	svaba run -p $NPROC -G ${reffa} -a ${pair_id} $bamlist
+	vcf-concat ${pair_id}.svaba.unfiltered*sv.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort| bgzip > ${pair_id}.${method}.var.vcf.gz
+	vcf-concat ${pair_id}.svaba.unfiltered*indel.vcf | perl -pe 's/\.consensus|\.bam//g' | vcf-sort | java -jar $SNPEFF_HOME/SnpSift.jar filter "( SPAN >= 20)" - |bgzip > ${pair_id}.svaba.indel.vcf.gz
+	vcf-concat ${pair_id}.${method}.var.vcf.gz ${pair_id}.svaba.indel.vcf.gz | vcf-sort| bgzip > ${pair_id}.${method}.svar.vcf.gz
+	rm ${pair_id}.contigs.bam
+    elif [[ $method == 'gridss' ]]
+    then
+	singularity exec --no-home --cleanenv /project/shared/bicf_workflow_ref/seqprg/singularity/gridss_v2.11.1.img gridss.sh --reference ${reffa} -o  ${pair_id}.${method}.svar.vcf.gz -t 8 -a gridss.assembly.bam --workingdir temp --steps All ${bams} --jvmheap 31g
+	rm gridss.assembly.bam
     fi
-    java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} lumpy.sv.vcf.gz | java -jar $SNPEFF_HOME/SnpSift.jar filter " ( GEN[*].DV >= 20 )" | bgzip > ${pair_id}.lumpy.vcf.gz
+    bash $baseDir/norm_annot.sh -r ${index_path} -p ${pair_id}.${method}.sv -v ${pair_id}.${method}.svar.vcf.gz -s    
+    java -jar $SNPEFF_HOME/SnpSift.jar filter "( GEN[*].DP >= 20 ) & ( FILTER = 'PASS'  | GEN[*].AO > 20)" ${pair_id}.${method}.sv.norm.vcf.gz | java -Xmx10g -jar $SNPEFF_HOME/snpEff.jar -no-intergenic -lof -c $SNPEFF_HOME/snpEff.config ${snpeffgeno} - | bgzip > ${pair_id}.${method}.vcf.gz
+    
+    if [[ $filter == 1 ]]
+    then
+	mv ${pair_id}.${method}.vcf.gz ${pair_id}.${method}.ori.vcf.gz
+	perl $baseDir/filter_sv.pl -t $tid -p ${pair_id}.${method} -i ${pair_id}.${method}.ori.vcf.gz
+	bgzip -f ${pair_id}.${method}.vcf
+    fi
 elif [[ $method == 'pindel' ]]
 then
     if [[ -z $isdocker ]]

@@ -4,10 +4,11 @@
 #module load vcftools/0.1.14 samtools/1.6 bedtools/2.26.0 
 use Getopt::Long qw(:config no_ignore_case no_auto_abbrev);
 my %opt = ();
-my $results = GetOptions (\%opt,'in|i=s','pid|p=s','tumor|t=s','sv|s=s');
+my $results = GetOptions (\%opt,'in|i=s','pid|p=s','tumor|t=s','sv|s=s',
+			  'method|a=s');
 
-open VCFOUT, ">$opt{pid}\.svaba.vcf" or die $!;
-open DELFUS, ">$opt{pid}\.svaba.potentialfusion.txt" or die $!;
+open VCFOUT, ">$opt{pid}\.$opt{method}.vcf" or die $!;
+open DELFUS, ">$opt{pid}\.$opt{method}.potentialfusion.txt" or die $!;
 
 open IN, "gunzip -c $opt{in} |" or die $!;
 
@@ -27,7 +28,13 @@ W1:while (my $line = <IN>) {
 	  $opt{tumor} = $gtheader[0];
 	}
       }
-    }
+            unless ($opt{normal}) {
+	if (grep(/N_DNA/,@gtheader)) {
+	  my @tsamps = grep(/N_DNA/,@gtheader);
+	  $opt{normal} = $tsamps[0];
+	}
+      }
+     }
     print VCFOUT $line,"\n";
     next;
   }
@@ -85,7 +92,6 @@ W1:while (my $line = <IN>) {
   next if ($tumoraltct[0] eq '.');
   $hash{AF} = join(",",@tumormaf);
   next if ($tumoraltct[0] < 5);
-  #next if ($tumormaf[0] < 0.01);
   my $keepforvcf = 0;
   my $keeptrx;
  F1:foreach $trx (split(/,/,$hash{ANN})) {
