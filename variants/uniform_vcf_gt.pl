@@ -18,6 +18,8 @@ while (my $line = <VCF>) {
       print OUT "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Approximate read depth (reads with MQ=255 or with bad mates are filtered)\">\n";
       print OUT "##INFO=<ID=CHR2,Number=1,Type=String,Description=\"Chromosome for END coordinate in case of a translocation\">\n";
       print OUT "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the structural variant\">\n";
+      print OUT "##INFO=<ID=VTYPE,Number=1,Type=String,Description=\"Variant Type\">\n";
+      print OUT "##INFO=<ID=SPAN,Number=1,Type=Integer,Description=\"Variant Size\">\n";
       @headerline = split(/\t/, $line);
       my ($c, $p,$i,$r,$a,$s,$f,$an,$fo,@snames) = @headerline;
       foreach my $j (0..$#snames) {
