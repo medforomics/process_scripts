@@ -19,7 +19,7 @@ do
         a) algo=$OPTARG;;
 	t) rna=1;;
 	b) tbed=$OPTARG;;
-	q) pon==$OPTARG;; 
+	q) pon=$OPTARG;; 
         h) usage;;
     esac
 done
