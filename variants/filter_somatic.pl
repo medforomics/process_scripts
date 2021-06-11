@@ -87,7 +87,7 @@ W1:while (my $line = <IN>) {
     my @mutallfreq = ();
     foreach my $k (0..$#ainfo) {
       $gtinfo{$deschead[$k]} = $ainfo[$k];
-      $hash{$deschead[$k]} = $ainfo[$k] unless ($subjid eq $opt{normal});
+      $hash{$deschead[$k]} = $ainfo[$k] unless ($opt{normal} && $subjid eq $opt{normal});
     }
     $gtinfo{DP} = (split(/,/,$gtinfo{DP}))[0] if ($gtinfo{DP});
     next F1 unless ($gtinfo{DP} && $gtinfo{DP} ne '.' && $gtinfo{DP} >= 1);
@@ -98,7 +98,7 @@ W1:while (my $line = <IN>) {
       next if ($act eq '.');
       push @mutallfreq, sprintf("%.4f",$act/$gtinfo{DP});
     }
-    if ($subjid eq $opt{normal}) {
+    if ($opt{normal} && $subjid eq $opt{normal}) {
       $hash{NormalAF} = $mutallfreq[0];
       $hash{NormalDP} = $gtinfo{DP};
       if ($mutallfreq[0] >= 0.25) {
